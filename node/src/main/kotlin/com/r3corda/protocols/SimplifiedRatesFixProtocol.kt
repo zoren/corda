@@ -1,19 +1,18 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.Fix
-import com.r3corda.core.contracts.FixOf
-import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.random63BitValue
-import com.r3corda.core.utilities.UntrustworthyData
-import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
+import net.corda.core.contracts.Fix
+import net.corda.core.contracts.FixOf
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Party
+import net.corda.core.random63BitValue
+import net.corda.core.utilities.UntrustworthyData
 import com.r3corda.node.services.statemachine.SimplifiedProtocolStateMachine
 import com.r3corda.node.services.statemachine.SimplifiedStateEvent
 import com.r3corda.node.services.statemachine.SimplifiedStateMachineManager
 import com.r3corda.protocols.SimplifiedRatesFixProtocol.FixOutOfRange
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import java.io.Serializable
 import java.math.BigDecimal
 import java.time.Duration
@@ -36,7 +35,7 @@ open class SimplifiedRatesFixProtocol() : SimplifiedProtocolStateMachine<Simplif
                        val fixOf: FixOf,
                        val expectedRate: BigDecimal,
                        val rateTolerance: BigDecimal,
-                       val timeOut: Duration,
+                       val timeOut: Duration,li
                        val fix: Fix) : Serializable
 
     enum class State {

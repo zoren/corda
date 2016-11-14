@@ -1,4 +1,4 @@
-package com.r3corda.node.services.statemachine
+package net.corda.node.services.statemachine
 
 import java.io.Serializable
 

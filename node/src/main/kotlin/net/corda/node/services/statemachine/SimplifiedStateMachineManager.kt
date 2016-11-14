@@ -1,12 +1,10 @@
-package com.r3corda.node.services.statemachine
+package net.corda.node.services.statemachine
 
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.Message
-import com.r3corda.core.messaging.MessageRecipients
-import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.serialization.deserialize
-import com.r3corda.core.serialization.serialize
-import com.r3corda.core.utilities.UntrustworthyData
+import net.corda.core.crypto.Party
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.serialize
+import net.corda.core.utilities.UntrustworthyData
 import java.io.Serializable
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
