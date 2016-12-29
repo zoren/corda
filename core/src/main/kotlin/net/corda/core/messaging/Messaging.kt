@@ -9,6 +9,8 @@ import net.corda.core.serialization.DeserializeAsKotlinObjectDef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import org.bouncycastle.asn1.x500.X500Name
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -97,6 +99,14 @@ interface MessagingService {
  */
 fun MessagingService.createMessage(topic: String, sessionID: Long = DEFAULT_SESSION_ID, data: ByteArray): Message
         = createMessage(TopicSession(topic, sessionID), data)
+
+fun MessagingService.subscribe(topic: String, sessionID: Long = DEFAULT_SESSION_ID): Observable<Message> {
+    val subject = PublishSubject.create<Message>()
+    val reg = addMessageHandler(topic, sessionID) { message, r ->
+        subject.onNext(message)
+    }
+    return subject.doOnUnsubscribe { removeMessageHandler(reg) }
+}
 
 /**
  * Registers a handler for the given topic and session ID that runs the given callback with the message and then removes

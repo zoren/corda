@@ -8,7 +8,6 @@ import net.corda.core.messaging.*
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.opaque
-import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.RPCUserService
@@ -129,18 +128,19 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             producer = session.createProducer()
 
             // Create a queue, consumer and producer for handling P2P network messages.
-            p2pConsumer = makeP2PConsumer(session, true)
-            networkMapRegistrationFuture.success {
-                state.locked {
-                    log.info("Network map is complete, so removing filter from P2P consumer.")
-                    try {
-                        p2pConsumer!!.close()
-                    } catch(e: ActiveMQObjectClosedException) {
-                        // Ignore it: this can happen if the server has gone away before we do.
-                    }
-                    p2pConsumer = makeP2PConsumer(session, false)
-                }
-            }
+            p2pConsumer = makeP2PConsumer(session, false)
+//            p2pConsumer = makeP2PConsumer(session, true)
+//            networkMapRegistrationFuture.success {
+//                state.locked {
+//                    log.info("Network map is complete, so removing filter from P2P consumer.")
+//                    try {
+//                        p2pConsumer!!.close()
+//                    } catch(e: ActiveMQObjectClosedException) {
+//                        // Ignore it: this can happen if the server has gone away before we do.
+//                    }
+//                    p2pConsumer = makeP2PConsumer(session, false)
+//                }
+//            }
 
             rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
             rpcNotificationConsumer = session.createConsumer(RPC_QUEUE_REMOVALS_QUEUE)
@@ -209,7 +209,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             p2pConsumer!!
         }
 
-        while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
+        while (/*!networkMapRegistrationFuture.isDone && */processMessage(consumer)) {
         }
     }
 
@@ -234,7 +234,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // Build the network map.
         runPreNetworkMap()
         // Process everything else once we have the network map.
-        runPostNetworkMap()
+//        runPostNetworkMap()
         shutdownLatch.countDown()
     }
 
