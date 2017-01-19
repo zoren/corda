@@ -31,7 +31,8 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -244,14 +245,14 @@ class StateMachineManagerTests {
         assertSessionTransfers(node2,
                 node1 sent sessionInit(SendFlow::class, payload) to node2,
                 node2 sent sessionConfirm to node1,
-                node1 sent sessionEnd to node2
+                node1 sent sessionEnd() to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(SendFlow::class, payload) to node3,
                 node3 sent sessionConfirm to node1,
-                node1 sent sessionEnd to node3
+                node1 sent sessionEnd() to node3
                 //There's no session end from the other flows as they're manually suspended
         )
 
@@ -278,14 +279,14 @@ class StateMachineManagerTests {
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionData(node2Payload) to node1,
-                node2 sent sessionEnd to node1
+                node2 sent sessionEnd() to node1
         )
 
         assertSessionTransfers(node3,
                 node1 sent sessionInit(ReceiveFlow::class) to node3,
                 node3 sent sessionConfirm to node1,
                 node3 sent sessionData(node3Payload) to node1,
-                node3 sent sessionEnd to node1
+                node3 sent sessionEnd() to node1
         )
     }
 
@@ -301,7 +302,7 @@ class StateMachineManagerTests {
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
                 node2 sent sessionData(21L) to node1,
-                node1 sent sessionEnd to node2
+                node1 sent sessionEnd() to node2
         )
     }
 
@@ -361,18 +362,60 @@ class StateMachineManagerTests {
     }
 
     @Test
-    fun `exception thrown on other side`() {
-        val erroringFiber = node2.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow }.map { it.stateMachine as FlowStateMachineImpl }
+    fun `FlowException thrown on other side`() {
+        val exception = MyFlowException("Nothing useful")
+        val erroringFiber = node2.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow(exception) }.map { it.stateMachine as FlowStateMachineImpl }
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
         net.runNetwork()
-        assertThatThrownBy { receivingFiber.resultFuture.getOrThrow() }.isInstanceOf(FlowException::class.java)
+        assertThatExceptionOfType(MyFlowException::class.java)
+                .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
+                .withMessage("Nothing useful")
+                .withStackTraceContaining("ReceiveFlow")  // Make sure the stack trace is that of the receiving flow
+        databaseTransaction(node2.database) {
+            assertThat(node2.checkpointStorage.checkpoints()).isEmpty()
+        }
         assertThat(receivingFiber.isTerminated).isTrue()
         assertThat(erroringFiber.getOrThrow().isTerminated).isTrue()
         assertSessionTransfers(
                 node1 sent sessionInit(ReceiveFlow::class) to node2,
                 node2 sent sessionConfirm to node1,
-                node2 sent sessionEnd to node1
+                node2 sent sessionEnd(exception) to node1
         )
+    }
+
+    private class ConditionalExceptionFlow(val otherParty: Party, val sendPayload: Any) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val throwException = receive<Boolean>(otherParty).unwrap { it }
+            if (throwException) {
+                throw MyFlowException("Throwing exception as requested")
+            }
+            send(otherParty, sendPayload)
+        }
+    }
+
+    @Test
+    fun `retry subFlow call due to receiving FlowException`() {
+        class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
+            @Suspendable
+            override fun call(): String = sendAndReceive<String>(otherParty, throwException).unwrap { it }
+        }
+
+        class RetryOnExceptionFlow(val otherParty: Party) : FlowLogic<String>() {
+            @Suspendable
+            override fun call(): String {
+                return try {
+                    subFlow(AskForExceptionFlow(otherParty, throwException = true))
+                } catch (e: MyFlowException) {
+                    subFlow(AskForExceptionFlow(otherParty, throwException = false))
+                }
+            }
+        }
+
+        node2.services.registerFlowInitiator(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
+        val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow(
@@ -396,7 +439,7 @@ class StateMachineManagerTests {
 
     private fun sessionData(payload: Any) = SessionData(0, payload)
 
-    private val sessionEnd = SessionEnd(0)
+    private fun sessionEnd(error: FlowException? = null) = SessionEnd(0, error)
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
         assertThat(sessionTransfers).containsExactly(*expected)
@@ -432,7 +475,6 @@ class StateMachineManagerTests {
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
     private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.net.myAddress)
-
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
         @Transient var flowStarted = false
@@ -491,7 +533,12 @@ class StateMachineManagerTests {
         }
     }
 
-    private object ExceptionFlow : FlowLogic<Nothing>() {
-        override fun call(): Nothing = throw Exception()
+    private class ExceptionFlow(val exception : Exception) : FlowLogic<Nothing>() {
+        override fun call(): Nothing = throw exception
+    }
+
+    private class MyFlowException(message: String) : FlowException(message) {
+        override fun equals(other: Any?): Boolean = other is MyFlowException && other.message == this.message
+        override fun hashCode(): Int = message?.hashCode() ?: 31
     }
 }
