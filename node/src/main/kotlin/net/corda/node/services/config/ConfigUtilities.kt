@@ -28,12 +28,11 @@ object ConfigHelper {
     private val log = loggerFor<ConfigHelper>()
 
     fun loadConfig(baseDirectory: Path,
-                   configFileOverride: Path? = null,
+                   configFile: Path = baseDirectory / "node.conf",
                    allowMissingConfig: Boolean = false,
                    configOverrides: Map<String, Any?> = emptyMap()): Config {
         val defaultConfig = ConfigFactory.parseResources("reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
-        val configFile = configFileOverride ?: baseDirectory / "node.conf"
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(allowMissingConfig))
 
         val overrideConfig = ConfigFactory.parseMap(configOverrides + mapOf(

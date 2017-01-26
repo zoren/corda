@@ -39,7 +39,6 @@ import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ExecutionException
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -103,7 +102,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     @Volatile private var stopping = false
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
-
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -307,7 +305,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
         session.fiber.logger.debug { "Initiated from $sessionInit on $session" }
-        startFiber(session.fiber)
+        resumeFiber(session.fiber)
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
@@ -360,6 +358,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 unfinishedFibers.countDown()
             }
         }
+        fiber.actionOnError = { throwable ->
+
+        }
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
@@ -385,25 +386,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun startFiber(fiber: FlowStateMachineImpl<*>) {
-        try {
-            resumeFiber(fiber)
-        } catch (e: ExecutionException) {
-            // There are two ways we can take exceptions in this method:
-            //
-            // 1) A bug in the SMM code itself whilst setting up the new flow. In that case the exception will
-            //    propagate out of this method as it would for any method.
-            //
-            // 2) An exception in the first part of the fiber after it's been invoked for the first time via
-            //    fiber.start(). In this case the exception will be caught and stashed in the flow logic future,
-            //    then sent to the unhandled exception handler above which logs it, and is then rethrown wrapped
-            //    in an ExecutionException or RuntimeException+EE so we can just catch it here and ignore it.
-        } catch (e: RuntimeException) {
-            if (e.cause !is ExecutionException)
-                throw e
-        }
-    }
-
     /**
      * Kicks off a brand new state machine of the given class.
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
@@ -425,7 +407,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         // If we are not started then our checkpoint will be picked up during start
         mutex.locked {
             if (started) {
-                startFiber(fiber)
+                resumeFiber(fiber)
             }
         }
         return fiber

@@ -26,7 +26,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.SQLException
 import java.util.*
-import java.util.concurrent.ExecutionException
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
@@ -50,6 +49,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: (FlowException?) -> Unit
+    @Transient internal lateinit var actionOnError: (Throwable) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -82,18 +82,29 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun run() {
         createTransaction()
-        val result = try {
-            logic.call()
+        try {
+            val result = logic.call()
+            endFlow(result, null)
+        } catch (e: FlowException) {
+            endFlow(null, e)  // A FlowException is a valid response from a flow
         } catch (t: Throwable) {
-            actionOnEnd(t as? FlowException)
-            _resultFuture?.setException(t)
-            if (t is FlowException) return  // A FlowException is a valid response from a flow
-            throw ExecutionException(t)
+            actionOnError(t)
         }
+    }
 
-        // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(null)
-        _resultFuture?.set(result)
+    private fun endFlow(result: R?, errorResponse: FlowException?) {
+        try {
+            actionOnEnd(errorResponse)
+            if (result != null) {
+                _resultFuture?.set(result)
+            } else {
+                _resultFuture?.setException(errorResponse!!)
+            }
+        } catch (t: Throwable) {
+            logger.error("Unable to end flow", t)
+            _resultFuture?.setException(
+                    IllegalStateException("Flow has experienced an internal error. Please contact your node administrator."))
+        }
     }
 
     private fun createTransaction() {

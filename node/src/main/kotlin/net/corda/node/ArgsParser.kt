@@ -36,7 +36,7 @@ class ArgsParser {
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
 }
 
-data class CmdLineOptions(val baseDirectory: Path, val configFile: Path?, val help: Boolean, val logToConsole: Boolean) {
+data class CmdLineOptions(val baseDirectory: Path, val configFile: Path, val help: Boolean, val logToConsole: Boolean) {
     fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
         return ConfigHelper.loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
     }

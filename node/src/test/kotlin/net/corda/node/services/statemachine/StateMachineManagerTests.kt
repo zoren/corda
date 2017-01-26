@@ -90,31 +90,6 @@ class StateMachineManagerTests {
     }
 
     @Test
-    fun `exception while fiber suspended`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(2, it) }
-        val flow = ReceiveFlow(node2.info.legalIdentity)
-        val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
-        // Before the flow runs change the suspend action to throw an exception
-        val exceptionDuringSuspend = Exception("Thrown during suspend")
-        fiber.actionOnSuspend = {
-            throw exceptionDuringSuspend
-        }
-        var uncaughtException: Throwable? = null
-        fiber.uncaughtExceptionHandler = UncaughtExceptionHandler { f, e ->
-            uncaughtException = e
-        }
-        net.runNetwork()
-        assertThatThrownBy {
-            fiber.resultFuture.getOrThrow()
-        }.isSameAs(exceptionDuringSuspend)
-        assertThat(node1.smm.allStateMachines).isEmpty()
-        // Make sure it doesn't get swallowed up
-        assertThat(uncaughtException?.rootCause).isSameAs(exceptionDuringSuspend)
-        // Make sure the fiber does actually terminate
-        assertThat(fiber.isTerminated).isTrue()
-    }
-
-    @Test
     fun `flow restarted just after receiving payload`() {
         node2.services.registerFlowInitiator(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         val payload = random63BitValue()
@@ -416,6 +391,42 @@ class StateMachineManagerTests {
         val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
+    }
+
+    @Test
+    fun `normal exception thrown on other side`() {
+        val exception = Exception("I am a bug!")
+        val buggyFlow = node2.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow(exception) }
+        val receivingValue = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThat(buggyFlow.getOrThrow().stateMachine.resultFuture.isDone).isFalse()
+        assertThat(receivingValue.isDone).isFalse()
+
+    }
+
+    @Test
+    fun `exception while fiber is suspended`() {
+        node2.services.registerFlowInitiator(ReceiveFlow::class) { SendFlow(2, it) }
+        val flow = ReceiveFlow(node2.info.legalIdentity)
+        val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
+        // Before the flow runs change the suspend action to throw an exception
+        val exceptionDuringSuspend = Exception("Thrown during suspend")
+        fiber.actionOnSuspend = {
+            throw exceptionDuringSuspend
+        }
+        var uncaughtException: Throwable? = null
+        fiber.uncaughtExceptionHandler = UncaughtExceptionHandler { f, e ->
+            uncaughtException = e
+        }
+        net.runNetwork()
+        assertThatThrownBy {
+            fiber.resultFuture.getOrThrow()
+        }.isSameAs(exceptionDuringSuspend)
+        assertThat(node1.smm.allStateMachines).isEmpty()
+        // Make sure it doesn't get swallowed up
+        assertThat(uncaughtException?.rootCause).isSameAs(exceptionDuringSuspend)
+        // Make sure the fiber does actually terminate
+        assertThat(fiber.isTerminated).isTrue()
     }
 
     private inline fun <reified P : FlowLogic<*>> MockNode.restartAndGetRestoredFlow(
