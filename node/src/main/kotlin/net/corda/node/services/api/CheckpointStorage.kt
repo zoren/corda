@@ -30,9 +30,9 @@ interface CheckpointStorage {
 }
 
 // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
-class Checkpoint(val serializedFiber: SerializedBytes<FlowStateMachineImpl<*>>) {
+class Checkpoint(val serialisedStateMachine: SerializedBytes<FlowStateMachineImpl<*>>) {
 
-    val id: SecureHash get() = serializedFiber.hash
+    val id: SecureHash get() = serialisedStateMachine.hash
 
     override fun equals(other: Any?): Boolean = other === this || other is Checkpoint && other.id == this.id
 

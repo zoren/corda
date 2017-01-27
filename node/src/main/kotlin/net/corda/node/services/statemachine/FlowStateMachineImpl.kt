@@ -28,29 +28,20 @@ import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.ExecutionException
 
-class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
-                              val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler) : Fiber<Unit>("flow", scheduler), FlowStateMachine<R> {
+class FlowStateMachineImpl<R>(override val id: StateMachineRunId) : FlowStateMachine<R> {
     companion object {
-        // Used to work around a small limitation in Quasar.
-        private val QUASAR_UNBLOCKER = run {
-            val field = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER")
-            field.isAccessible = true
-            field.get(null)
-        }
-
         /**
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
-        fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
+        fun currentStateMachine(): FlowStateMachineImpl<*>? = (Strand.currentStrand() as? StateMachineFiber<*>)?.stateMachine
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (FlowException?) -> Unit
-    @Transient internal var fromCheckpoint: Boolean = false
+    @Transient internal lateinit var rebootOnError: (FlowException) -> Unit
+    @Transient internal lateinit var actionOnEnd: () -> Unit
     @Transient private var txTrampoline: Transaction? = null
 
     @Transient private var _logger: Logger? = null
@@ -72,27 +63,46 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
-    internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
+    private var _fiber: StateMachineFiber<R>? = null
+    var fiber: StateMachineFiber<R>
+        get() = _fiber ?: throw IllegalStateException()
+        set(value) {
+            _fiber?.apply { require(state == Strand.State.TERMINATED) }
+            require(value.state != Strand.State.RUNNING)
+            synchronized(this) {
+                value.logic.stateMachine = this
+                value.name = id.toString()
+                _fiber = value
+            }
+        }
 
-    init {
-        logic.stateMachine = this
-        name = id.toString()
-    }
+    val logic: FlowLogic<R> get() = fiber.logic
 
     @Suspendable
-    override fun run() {
+    private fun run() {
         createTransaction()
         val result = try {
             logic.call()
+        } catch (e: FlowException) {
+            System.err.println(logic)
+            e.printStackTrace()
+            if (e.stackTrace[0].className == javaClass.name) {
+                // FlowException originated from within this class so assume it was propagated to us (see suspendAndExpectReceive)
+                // The fact it's reached here means the flow wants to terminate on receiving this error
+                actionOnEnd()
+                _resultFuture?.setException(e)
+            } else {
+                rebootOnError(e)
+            }
+            return
         } catch (t: Throwable) {
-            actionOnEnd(t as? FlowException)
+            actionOnEnd()
             _resultFuture?.setException(t)
-            if (t is FlowException) return  // A FlowException is a valid response from a flow
             throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(null)
+        actionOnEnd()
         _resultFuture?.set(result)
     }
 
@@ -175,7 +185,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private fun getSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?): Pair<FlowSession, Boolean> {
-        val session = openSessions[Pair(sessionFlow, otherParty)]
+        val session = fiber.openSessions[Pair(sessionFlow, otherParty)]
         return if (session != null) {
             Pair(session, false)
         } else {
@@ -193,7 +203,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
         val session = FlowSession(sessionFlow, random63BitValue(), FlowSessionState.Initiating(otherParty))
-        openSessions[Pair(sessionFlow, otherParty)] = session
+        fiber.openSessions[Pair(sessionFlow, otherParty)] = session
         val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
         val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
         val (peerParty, sessionInitResponse) = sendAndReceiveInternal<SessionInitResponse>(session, sessionInit)
@@ -227,19 +237,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                             "got nothing: $receiveRequest")
         }
 
-        if (receivedMessage.message is SessionEnd) {
-            openSessions.values.remove(session)
-            if (receivedMessage.message.errorResponse != null) {
-                @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-                (receivedMessage.message.errorResponse as java.lang.Throwable).fillInStackTrace()
-                throw receivedMessage.message.errorResponse
-            } else {
-                throw FlowSessionException("${session.state.sendToParty} has ended their flow but we were expecting to " +
-                        "receive ${receiveRequest.receiveType.simpleName} from them")
-            }
-        } else if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
+        if (receiveRequest.receiveType.isInstance(receivedMessage.message)) {
             @Suppress("UNCHECKED_CAST")
             return receivedMessage as ReceivedSessionMessage<M>
+        } else if (receivedMessage.message is SessionError) {
+            @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+            (receivedMessage.message.error as java.lang.Throwable).fillInStackTrace()
+            throw receivedMessage.message.error
+        } else if (receivedMessage.message is SessionEnd) {
+            fiber.openSessions.values.remove(session)
+            throw FlowSessionException("${session.state.sendToParty} has ended their flow but we were expecting to " +
+                    "receive ${receiveRequest.receiveType.simpleName} from them")
         } else {
             throw IllegalStateException("Was expecting a ${receiveRequest.receiveType.simpleName} but instead got " +
                     "${receivedMessage.message}: $receiveRequest")
@@ -254,7 +262,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         ioRequest.session.waitingForResponse = (ioRequest is ReceiveRequest<*>)
 
         var exceptionDuringSuspend: Throwable? = null
-        parkAndSerialize { fiber, serializer ->
+        Fiber.parkAndSerialize { f, s ->
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             try {
@@ -265,7 +273,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 // Quasar does not terminate the fiber properly if an exception occurs during a suspend. We have to
                 // resume the fiber just so that we can throw it when it's running.
                 exceptionDuringSuspend = t
-                resume(scheduler)
+                fiber.resume(fiber.scheduler)
             }
         }
 
@@ -276,21 +284,40 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.trace { "Resumed from $ioRequest" }
     }
 
-    internal fun resume(scheduler: FiberScheduler) {
-        try {
-            if (fromCheckpoint) {
-                logger.info("Resumed from checkpoint")
-                fromCheckpoint = false
-                Fiber.unparkDeserialized(this, scheduler)
-            } else if (state == State.NEW) {
-                logger.trace("Started")
-                start()
-            } else {
-                logger.trace("Resumed")
-                Fiber.unpark(this, QUASAR_UNBLOCKER)
+    class StateMachineFiber<R>(val logic: FlowLogic<R>, scheduler: FiberScheduler) : Fiber<Unit>(scheduler) {
+        companion object {
+            // Used to work around a small limitation in Quasar.
+            private val QUASAR_UNBLOCKER = run {
+                val field = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER")
+                field.isAccessible = true
+                field.get(null)
             }
-        } catch (t: Throwable) {
-            logger.error("Error during resume", t)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val stateMachine: FlowStateMachineImpl<R> get() = logic.stateMachine as FlowStateMachineImpl<R>
+        internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
+        @Transient internal var fromCheckpoint: Boolean = false
+
+        @Suspendable
+        override fun run() = stateMachine.run()
+
+        internal fun resume(scheduler: FiberScheduler) {
+            try {
+                if (fromCheckpoint) {
+                    stateMachine.logger.info("Resumed from checkpoint")
+                    fromCheckpoint = false
+                    Fiber.unparkDeserialized(this, scheduler)
+                } else if (state == State.NEW) {
+                    stateMachine.logger.info("Started")
+                    start()
+                } else {
+                    stateMachine.logger.info("Resumed")
+                    Fiber.unpark(this, QUASAR_UNBLOCKER)
+                }
+            } catch (t: Throwable) {
+                stateMachine.logger.error("Error during resume", t)
+            }
         }
     }
 }

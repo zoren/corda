@@ -29,7 +29,10 @@ data class SessionData(override val recipientSessionId: Long, val payload: Any) 
     }
 }
 
-data class SessionEnd(override val recipientSessionId: Long, val errorResponse: FlowException?) : ExistingSessionMessage
+// TODO Don't serialise the stack trace
+data class SessionError(override val recipientSessionId: Long, val error: FlowException) : ExistingSessionMessage
+
+data class SessionEnd(override val recipientSessionId: Long) : ExistingSessionMessage
 
 data class ReceivedSessionMessage<out M : ExistingSessionMessage>(val sender: Party, val message: M)
 
