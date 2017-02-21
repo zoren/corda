@@ -19,7 +19,7 @@ import java.time.LocalDate
 class SimmValuationTest : IntegrationTestCategory {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
-        val valuationDate = LocalDate.parse("2016-06-06")
+        val valuationDate: LocalDate = LocalDate.of(2016, 6, 6)
         val nodeALegalName = "Bank A"
         val nodeBLegalName = "Bank B"
         val testTradeId = "trade1"

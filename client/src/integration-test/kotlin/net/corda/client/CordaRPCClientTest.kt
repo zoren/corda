@@ -10,12 +10,8 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.DriverBasedTest
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.driver
 import net.corda.node.internal.Node
 import net.corda.node.services.User
-import net.corda.node.services.config.configureTestSSL
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -35,8 +31,12 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
-        node = startNode("Alice", rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
-        client = CordaRPCClient(node.configuration.artemisAddress, configureTestSSL())
+        node = startNode(
+                "Alice",
+                rpcUsers = listOf(rpcUser),
+                advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))
+        ).getOrThrow()
+        client = rpcClientTo(node)
     }
 
     @Test

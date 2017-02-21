@@ -12,6 +12,7 @@ import net.corda.node.internal.Node
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.freeLocalHostAndPort
@@ -32,7 +33,7 @@ abstract class NodeBasedTest {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private val nodes = ArrayList<Node>()
+    private val nodes = HashMap<Node, MutableList<CordaRPCClient>>()
     private var _networkMapNode: Node? = null
 
     val networkMapNode: Node get() = _networkMapNode ?: startNetworkMapNode()
@@ -43,7 +44,10 @@ abstract class NodeBasedTest {
      */
     @After
     fun stopAllNodes() {
-        nodes.forEach(Node::stop)
+        nodes.forEach { node, clients ->
+            clients.forEach { it.close() }
+            node.stop()
+        }
         nodes.clear()
         _networkMapNode = null
     }
@@ -82,7 +86,8 @@ abstract class NodeBasedTest {
 
     fun startNotaryCluster(notaryName: String,
                            clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
+                           serviceType: ServiceType = RaftValidatingNotaryService.type,
+                           rpcUsers: List<User> = emptyList()): ListenableFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
                 serviceType.id,
@@ -94,12 +99,14 @@ abstract class NodeBasedTest {
         val masterNodeFuture = startNode(
                 "$notaryName-0",
                 advertisedServices = setOf(serviceInfo),
+                rpcUsers = rpcUsers,
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
                     "$notaryName-$it",
                     advertisedServices = setOf(serviceInfo),
+                    rpcUsers = rpcUsers,
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
                             "notaryClusterAddresses" to listOf(nodeAddresses[0])))
@@ -108,6 +115,12 @@ abstract class NodeBasedTest {
         return Futures.allAsList(remainingNodesFutures).flatMap { remainingNodes ->
             masterNodeFuture.map { masterNode -> listOf(masterNode) + remainingNodes }
         }
+    }
+
+    fun rpcClientTo(node: Node): CordaRPCClient {
+        val rpcClient = CordaRPCClient(node.configuration.artemisAddress, node.configuration)
+        nodes[node]!! += rpcClient
+        return rpcClient
     }
 
     private fun startNodeInternal(legalName: String,
@@ -134,7 +147,7 @@ abstract class NodeBasedTest {
 
         val node = FullNodeConfiguration(baseDirectory, config).createNode()
         node.start()
-        nodes += node
+        nodes.computeIfAbsent(node) { ArrayList() }
         thread(name = legalName) {
             node.run()
         }

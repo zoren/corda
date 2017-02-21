@@ -24,8 +24,8 @@ import java.time.LocalDate
 
 class IRSDemoTest : IntegrationTestCategory {
     val rpcUser = User("user", "password", emptySet())
-    val currentDate = LocalDate.now()
-    val futureDate = currentDate.plusMonths(6)
+    val currentDate: LocalDate = LocalDate.now()
+    val futureDate: LocalDate = currentDate.plusMonths(6)
 
     @Test
     fun `runs IRS demo`() {

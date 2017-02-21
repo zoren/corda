@@ -5,7 +5,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.IssuerFlow
 import net.corda.node.services.User
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.NodeBasedTest
@@ -27,8 +26,7 @@ class TraderDemoTest : NodeBasedTest() {
         ).getOrThrow()
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
-            val client = CordaRPCClient(it.configuration.artemisAddress, it.configuration)
-            client.start(demoUser[0].username, demoUser[0].password).proxy()
+            node -> rpcClientTo(node).start(demoUser[0].username, demoUser[0].password).proxy()
         }
 
         TraderDemoClientApi(nodeARpc).runBuyer()
