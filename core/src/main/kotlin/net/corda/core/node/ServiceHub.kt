@@ -53,7 +53,6 @@ interface ServiceHub : ServicesForResolution {
      *
      * @param txs The transactions to record.
      */
-    // TODO: Make this take a single tx.
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
     /**
