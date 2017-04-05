@@ -24,7 +24,7 @@ val rpcLog: Logger by lazy { LoggerFactory.getLogger("net.corda.rpc") }
 /** Used in the RPC wire protocol to wrap an observation with the handle of the observable it's intended for. */
 data class MarshalledObservation(val forHandle: Int, val what: Notification<*>)
 
-data class User(val username: String, val password: String, val permissions: Set<String>) {
+data class User(val username: String, val password: String, val permissions: Set<String> = emptySet()) {
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 

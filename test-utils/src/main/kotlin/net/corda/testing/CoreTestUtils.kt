@@ -5,8 +5,6 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.typesafe.config.Config
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -21,11 +19,13 @@ import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.User
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -168,6 +168,7 @@ data class TestNodeConfiguration(
         override val networkMapService: NetworkMapInfo?,
         override val keyStorePassword: String = "cordacadevpass",
         override val trustStorePassword: String = "trustpass",
+        override val rpcUsers: List<User> = emptyList(),
         override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
         override val nearestCity: String = "Null Island",
         override val emailAddress: String = "",
@@ -176,8 +177,6 @@ data class TestNodeConfiguration(
         override val certificateSigningService: URL = URL("http://localhost"),
         override val certificateChainCheckPolicies: Map<String, CertificateChainCheckPolicy> = emptyMap(),
         override val verifierType: VerifierType = VerifierType.InMemory) : NodeConfiguration
-
-fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
 
 @JvmOverloads
 fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {

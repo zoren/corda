@@ -63,12 +63,3 @@ fun Config.getProperties(path: String): Properties {
     }
     return props
 }
-
-@Suppress("UNCHECKED_CAST")
-inline fun <reified T : Any> Config.getListOrElse(path: String, default: Config.() -> List<T>): List<T> {
-    return if (hasPath(path)) {
-        (if (T::class == String::class) getStringList(path) else getConfigList(path)) as List<T>
-    } else {
-        this.default()
-    }
-}
