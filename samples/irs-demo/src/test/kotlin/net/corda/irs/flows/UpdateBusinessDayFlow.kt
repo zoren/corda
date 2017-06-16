@@ -1,6 +1,7 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.TestClock
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -10,7 +11,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.node.utilities.TestClock
 import java.time.LocalDate
 
 /**

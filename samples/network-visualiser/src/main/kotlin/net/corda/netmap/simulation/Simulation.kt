@@ -2,6 +2,7 @@ package net.corda.netmap.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.TestClock
 import net.corda.core.crypto.locationOrNull
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
@@ -23,8 +24,6 @@ import net.corda.node.utilities.transaction
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.TestClock
-import net.corda.testing.node.setTo
 import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -32,7 +31,7 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import java.util.*
 
 /**
@@ -198,7 +197,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     init {
         // Advance node clocks when current time is changed
         dateChanges.subscribe {
-            clocks.setTo(currentDateAndTime.toInstant(ZoneOffset.UTC))
+            clocks.forEach { it.setTo(currentDateAndTime.toInstant(UTC)) }
         }
     }
 
