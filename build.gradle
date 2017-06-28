@@ -270,12 +270,84 @@ bintrayConfig {
 // Build a ZIP of all JARs required to compile the Cordapp template
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
-task buildCordappDependenciesZip(type: Zip) {
-    baseName 'corda-deps'
-    from configurations.runtime
-    from configurations.compile
-    from configurations.testCompile
-    from buildscript.configurations.classpath
-    from 'node/capsule/NOTICE' // CDDL notice
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+//task buildCordappDependenciesZip(type: Zip) {
+//    baseName 'corda-deps'
+//    from configurations.runtime
+//    from configurations.compile
+//    from configurations.testCompile
+//    from buildscript.configurations.classpath
+//    from 'node/capsule/NOTICE' // CDDL notice
+//    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+//}
+
+configurations {
+    repo
+    poms
+}
+
+repositories {
+    maven { url 'http://www.sparetimelabs.com/maven2' }
+    flatDir {
+        dirs "${project(':tools:demobench').projectDir}/libs"
+    }
+}
+
+def createMavenDirectory() {
+    mkdir("$rootProject.buildDir/corda-maven")
+}
+
+def createDependencyDirectory(String group, String name, String version) {
+    def parts = group.split("\\.")
+    def curPath = "$rootProject.buildDir/corda-maven/"
+    for(part in parts) {
+        curPath += part + "/"
+        mkdir(curPath)
+    }
+    return mkdir("$curPath/$name/$version")
+}
+
+def copyDependencyIntoRepo(ResolvedArtifact dep) {
+    def module = dep.moduleVersion.id
+    println("${module.group}:${module.name}:${module.version}")
+    def dir = createDependencyDirectory(module.group, module.name, module.version)
+    println(dep.file)
+    project.copy {
+        from dep.file
+        into dir
+    }
+}
+
+def clinttest() {
+    def excludeProjects = [ project(':tools:demobench') ]
+    def projects = [ rootProject ] + subprojects.findAll { it.plugins.hasPlugin('java') && !excludeProjects.contains(it) }
+    def projectNames = projects*.name
+    def artifacts = projects*.configurations*.runtime*.resolvedConfiguration*.resolvedArtifacts
+            .flatten()
+            .findAll { !projectNames.contains(it.moduleVersion.id.name) }
+    artifacts.each { artifact ->
+        dependencies {
+            repo(
+                    group: artifact.moduleVersion.id.group,
+                    name: artifact.moduleVersion.id.name,
+                    version: artifact.moduleVersion.id.version,
+                    ext: artifact.extension
+            )
+            repo(
+                    group: artifact.moduleVersion.id.group,
+                    name: artifact.moduleVersion.id.name,
+                    version: artifact.moduleVersion.id.version,
+                    ext: 'pom'
+            )
+        }
+    }
+    configurations.repo.resolvedConfiguration.resolvedArtifacts.each {
+        copyDependencyIntoRepo(it)
+    }
+}
+
+task buildCordappMavenRepo {
+    doLast {
+        createMavenDirectory()
+        clinttest()
+    }
 }
