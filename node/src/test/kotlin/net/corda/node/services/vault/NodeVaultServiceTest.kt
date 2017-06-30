@@ -41,6 +41,7 @@ class NodeVaultServiceTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
+        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
@@ -61,6 +62,7 @@ class NodeVaultServiceTest {
     @After
     fun tearDown() {
         database.close()
+        resetTestSerialization()
         LogHelper.reset(NodeVaultService::class)
     }
 

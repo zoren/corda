@@ -55,6 +55,7 @@ class VaultQueryTests {
 
     @Before
     fun setUp() {
+        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
@@ -78,6 +79,7 @@ class VaultQueryTests {
     @After
     fun tearDown() {
         database.close()
+        resetTestSerialization()
     }
 
     /**

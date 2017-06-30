@@ -7,6 +7,7 @@ import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
@@ -53,9 +54,15 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
+        initialiseTestSerialization()
         tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
                 inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey))
         )
+    }
+
+    @After
+    fun teardown() {
+        resetTestSerialization()
     }
 
     @Test

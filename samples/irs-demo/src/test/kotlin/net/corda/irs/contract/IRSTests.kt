@@ -9,6 +9,8 @@ import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -201,6 +203,16 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests {
+    @Before
+    fun setUp() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun tearDown() {
+        resetTestSerialization()
+    }
+
     val megaCorpServices = MockServices(MEGA_CORP_KEY)
     val miniCorpServices = MockServices(MINI_CORP_KEY)
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)
@@ -370,7 +382,7 @@ class IRSTests {
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        return ledger {
+        return ledger(initialiseSerialization = false) {
             transaction("Agreement") {
                 output("irs post agreement") { singleIRS() }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -401,7 +413,7 @@ class IRSTests {
     @Test
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
         val irs = singleIRS()
-        transaction {
+        transaction(initialiseSerialization = false) {
             input { irs }
             output("irs post agreement") { irs }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -414,7 +426,7 @@ class IRSTests {
     fun `ensure failure occurs when no events in fix schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FixedRatePaymentEvent>()
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
             }
@@ -428,7 +440,7 @@ class IRSTests {
     fun `ensure failure occurs when no events in floating schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FloatingRatePaymentEvent>()
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
             }
@@ -441,7 +453,7 @@ class IRSTests {
     @Test
     fun `ensure notionals are non zero`() {
         val irs = singleIRS()
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
             }
@@ -450,7 +462,7 @@ class IRSTests {
             this `fails with` "All notionals must be non zero"
         }
 
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
             }
@@ -464,7 +476,7 @@ class IRSTests {
     fun `ensure positive rate on fixed leg`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS
             }
@@ -481,7 +493,7 @@ class IRSTests {
     fun `ensure same currency notionals`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS
             }
@@ -495,7 +507,7 @@ class IRSTests {
     fun `ensure notional amounts are equal`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS
             }
@@ -509,7 +521,7 @@ class IRSTests {
     fun `ensure trade date and termination date checks are done pt1`() {
         val irs = singleIRS()
         val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS1
             }
@@ -519,7 +531,7 @@ class IRSTests {
         }
 
         val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS2
             }
@@ -534,7 +546,7 @@ class IRSTests {
         val irs = singleIRS()
 
         val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS3
             }
@@ -545,7 +557,7 @@ class IRSTests {
 
 
         val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction {
+        transaction(initialiseSerialization = false) {
             output {
                 modifiedIRS4
             }
@@ -561,7 +573,7 @@ class IRSTests {
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        transaction {
+        transaction(initialiseSerialization = false) {
             output("irs post agreement") { singleIRS() }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timeWindow(TEST_TX_TIME)
@@ -574,7 +586,7 @@ class IRSTests {
                 oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
                 oldIRS.common)
 
-        transaction {
+        transaction(initialiseSerialization = false) {
             input {
                 oldIRS
 
@@ -654,7 +666,7 @@ class IRSTests {
 
         val irs = singleIRS()
 
-        return ledger {
+        return ledger(initialiseSerialization = false) {
             transaction("Agreement") {
                 output("irs post agreement1") {
                     irs.copy(

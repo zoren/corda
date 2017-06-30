@@ -62,6 +62,7 @@ class ArtemisMessagingTests {
 
     @Before
     fun setUp() {
+        initialiseTestSerialization()
         val baseDirectory = temporaryFolder.root.toPath()
         userService = RPCUserServiceImpl(emptyList())
         config = testNodeConfiguration(
@@ -79,6 +80,7 @@ class ArtemisMessagingTests {
         messagingClient = null
         messagingServer = null
         database.close()
+        resetTestSerialization()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

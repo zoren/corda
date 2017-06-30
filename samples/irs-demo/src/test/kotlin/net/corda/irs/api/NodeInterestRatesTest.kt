@@ -61,6 +61,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
+        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         database.transaction {
             oracle = NodeInterestRates.Oracle(
@@ -74,6 +75,7 @@ class NodeInterestRatesTest {
     @After
     fun tearDown() {
         database.close()
+        resetTestSerialization()
     }
 
     @Test
@@ -202,7 +204,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `network tearoff`() {
-        val mockNet = MockNetwork()
+        val mockNet = MockNetwork(initialiseSerialization = false)
         val n1 = mockNet.createNotaryNode()
         val n2 = mockNet.createNode(n1.network.myAddress, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)

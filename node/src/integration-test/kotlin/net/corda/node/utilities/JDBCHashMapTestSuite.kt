@@ -10,7 +10,9 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -42,6 +44,7 @@ class JDBCHashMapTestSuite {
         @JvmStatic
         @BeforeClass
         fun before() {
+            initialiseTestSerialization()
             database = configureDatabase(makeTestDataSourceProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
@@ -57,6 +60,7 @@ class JDBCHashMapTestSuite {
         fun after() {
             closeDatabaseTx()
             database.close()
+            resetTestSerialization()
         }
 
         @JvmStatic
@@ -227,12 +231,14 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
+            initialiseTestSerialization()
             database = configureDatabase(makeTestDataSourceProperties())
         }
 
         @After
         fun after() {
             database.close()
+            resetTestSerialization()
         }
 
 

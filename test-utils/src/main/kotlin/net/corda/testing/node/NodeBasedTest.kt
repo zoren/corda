@@ -25,9 +25,12 @@ import net.corda.nodeapi.config.parseAs
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import org.apache.logging.log4j.Level
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.util.*
@@ -53,6 +56,11 @@ abstract class NodeBasedTest {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
     }
 
+    @Before
+    fun setup() {
+        initialiseTestSerialization()
+    }
+
     /**
      * Stops the network map node and all the nodes started by [startNode]. This is called automatically after each test
      * but can also be called manually within a test.
@@ -71,6 +79,7 @@ abstract class NodeBasedTest {
         nodes.clear()
         _networkMapNode = null
         Futures.allAsList(portNotBoundChecks).getOrThrow()
+        resetTestSerialization()
     }
 
     /**
@@ -161,7 +170,7 @@ abstract class NodeBasedTest {
 
         val parsedConfig = config.parseAs<FullNodeConfiguration>()
         val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
-                if (parsedConfig.useTestClock) TestClock() else NodeClock())
+                if (parsedConfig.useTestClock) TestClock() else NodeClock(), initialiseSerialization = false)
         node.start()
         nodes += node
         thread(name = legalName.commonName) {

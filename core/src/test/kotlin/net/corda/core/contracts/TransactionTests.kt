@@ -12,12 +12,25 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionTests {
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
+    }
 
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair): SignedTransaction {
         val bytes: SerializedBytes<WireTransaction> = wtx.serialized

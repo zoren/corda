@@ -8,13 +8,27 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockTransactionStorage
+import net.corda.testing.resetTestSerialization
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class TransactionGraphSearchTests {
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
+    }
+
     class GraphTransactionStorage(val originTx: SignedTransaction, val inputTx: SignedTransaction) : MockTransactionStorage() {
         init {
             addTransaction(originTx)

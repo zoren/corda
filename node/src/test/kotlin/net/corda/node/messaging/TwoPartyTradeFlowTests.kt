@@ -71,7 +71,7 @@ class TwoPartyTradeFlowTests {
 
     @Before
     fun before() {
-        mockNet = MockNetwork(false)
+        //mockNet = MockNetwork(false)
         LogHelper.setLevel("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -79,6 +79,7 @@ class TwoPartyTradeFlowTests {
     fun after() {
         mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
+        mockNet.stopNodes()
     }
 
     @Test
@@ -88,7 +89,7 @@ class TwoPartyTradeFlowTests {
         // allow interruption half way through.
         mockNet = MockNetwork(false, true)
 
-        ledger {
+        ledger(initialiseSerialization = false) {
             val basketOfNodes = mockNet.createSomeNodes(2)
             val notaryNode = basketOfNodes.notaryNode
             val aliceNode = basketOfNodes.partyNodes[0]
@@ -133,7 +134,7 @@ class TwoPartyTradeFlowTests {
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = MockNetwork(false, true)
 
-        ledger {
+        ledger(initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             val bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
@@ -182,7 +183,8 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `shutdown and restore`() {
-        ledger {
+        mockNet = MockNetwork(false)
+        ledger(initialiseSerialization = false) {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
             val aliceNode = mockNet.createPartyNode(notaryNode.network.myAddress, ALICE.name)
             var bobNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOB.name)
@@ -302,11 +304,13 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
+        mockNet = MockNetwork(false)
+
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
 
-        ledger(aliceNode.services) {
+        ledger(aliceNode.services, initialiseSerialization = false) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -401,11 +405,13 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `track works`() {
+        mockNet = MockNetwork(false)
+
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = makeNodeWithTracking(notaryNode.network.myAddress, ALICE.name)
         val bobNode = makeNodeWithTracking(notaryNode.network.myAddress, BOB.name)
 
-        ledger(aliceNode.services) {
+        ledger(aliceNode.services, initialiseSerialization = false) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -475,14 +481,16 @@ class TwoPartyTradeFlowTests {
 
     @Test
     fun `dependency with error on buyer side`() {
-        ledger {
+        mockNet = MockNetwork(false)
+        ledger(initialiseSerialization = false) {
             runWithError(true, false, "at least one asset input")
         }
     }
 
     @Test
     fun `dependency with error on seller side`() {
-        ledger {
+        mockNet = MockNetwork(false)
+        ledger(initialiseSerialization = false) {
             runWithError(false, true, "Issuances must have a time-window")
         }
     }

@@ -21,8 +21,10 @@ import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.LogHelper
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -45,6 +47,7 @@ class VaultWithCashTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
+        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
@@ -66,6 +69,7 @@ class VaultWithCashTest {
     fun tearDown() {
         LogHelper.reset(VaultWithCashTest::class)
         database.close()
+        resetTestSerialization()
     }
 
     @Test

@@ -6,7 +6,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger
-import net.corda.testing.transaction
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -14,6 +15,16 @@ import java.time.temporal.ChronoUnit
 val TEST_TIMELOCK_ID = TransactionEncumbranceTests.DummyTimeLock()
 
 class TransactionEncumbranceTests {
+    @Before
+    fun initialise() {
+        //initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        //resetTestSerialization()
+    }
+
     val defaultIssuer = MEGA_CORP.ref(1)
 
     val state = Cash.State(
@@ -114,22 +125,26 @@ class TransactionEncumbranceTests {
 
     @Test
     fun `state cannot be encumbered by itself`() {
-        transaction {
-            input { state }
-            output(encumbrance = 0) { stateWithNewOwner }
-            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-            this `fails with` "Missing required encumbrance 0 in OUTPUT"
+        ledger {
+            transaction {
+                input { state }
+                output(encumbrance = 0) { stateWithNewOwner }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
+                this `fails with` "Missing required encumbrance 0 in OUTPUT"
+            }
         }
     }
 
     @Test
     fun `encumbrance state index must be valid`() {
-        transaction {
-            input { state }
-            output(encumbrance = 2) { stateWithNewOwner }
-            output { timeLock }
-            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-            this `fails with` "Missing required encumbrance 2 in OUTPUT"
+        ledger {
+            transaction {
+                input { state }
+                output(encumbrance = 2) { stateWithNewOwner }
+                output { timeLock }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
+                this `fails with` "Missing required encumbrance 2 in OUTPUT"
+            }
         }
     }
 

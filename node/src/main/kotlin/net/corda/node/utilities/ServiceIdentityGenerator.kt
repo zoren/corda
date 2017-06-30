@@ -3,8 +3,8 @@ package net.corda.node.utilities
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
+import net.corda.core.serialization.Singletons.STORAGE_CONTEXT
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
@@ -41,7 +41,7 @@ object ServiceIdentityGenerator {
             Files.createDirectories(dir)
             notaryPartyBytes.writeToFile(dir.resolve(publicKeyFile))
             // Use storageKryo as our whitelist is not available in the gradle build environment:
-            keyPair.serialize(storageKryo()).writeToFile(dir.resolve(privateKeyFile))
+            keyPair.serialize(context = STORAGE_CONTEXT).writeToFile(dir.resolve(privateKeyFile))
         }
         return notaryParty
     }

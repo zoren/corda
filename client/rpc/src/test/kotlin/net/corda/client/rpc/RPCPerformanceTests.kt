@@ -8,7 +8,6 @@ import net.corda.core.seconds
 import net.corda.core.utilities.div
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface
-import net.corda.testing.driver.ShutdownManager
 import net.corda.testing.measure
 import net.corda.testing.performance.startPublishingFixedRateInjector
 import net.corda.testing.performance.startReporter

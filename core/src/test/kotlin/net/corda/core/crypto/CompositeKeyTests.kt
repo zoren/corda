@@ -5,6 +5,10 @@ import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
+import org.junit.After
+import org.junit.Before
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.loadKeyStore
 import net.corda.node.utilities.loadOrCreateKeyStore
@@ -20,6 +24,16 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CompositeKeyTests {
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
+    }
+
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()

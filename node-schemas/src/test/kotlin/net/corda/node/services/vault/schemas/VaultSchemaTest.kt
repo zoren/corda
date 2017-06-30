@@ -22,6 +22,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.vault.schemas.requery.*
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
@@ -52,6 +54,7 @@ class VaultSchemaTest {
 
     @Before
     fun setup() {
+        initialiseTestSerialization()
         val dataSource = JdbcDataSource()
         dataSource.setURL("jdbc:h2:mem:vault_persistence;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1")
         val configuration = KotlinConfiguration(dataSource = dataSource, model = Models.VAULT, mapping = setupCustomMapping(), useDefaultLogging = true)
@@ -77,6 +80,7 @@ class VaultSchemaTest {
     @After
     fun tearDown() {
         data.close()
+        resetTestSerialization()
     }
 
     private class VaultNoopContract : Contract {

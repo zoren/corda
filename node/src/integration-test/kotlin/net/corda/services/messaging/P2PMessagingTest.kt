@@ -2,11 +2,13 @@ package net.corda.services.messaging
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.*
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.elapsedTime
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -42,6 +44,7 @@ class P2PMessagingTest : NodeBasedTest() {
         // Start the network map a second time - this will restore message queues from the journal.
         // This will hang and fail prior the fix. https://github.com/corda/corda/issues/37
         stopAllNodes()
+        initialiseTestSerialization() // stopAllNodes() resets
         startNodes().getOrThrow(timeout = startUpDuration.multipliedBy(3))
     }
 

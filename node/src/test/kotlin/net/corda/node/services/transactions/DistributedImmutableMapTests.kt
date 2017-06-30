@@ -13,7 +13,9 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.freeLocalHostAndPort
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
 import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
@@ -33,6 +35,7 @@ class DistributedImmutableMapTests {
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
+        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         cluster = setUpCluster()
     }
@@ -46,6 +49,7 @@ class DistributedImmutableMapTests {
             it.server.shutdown()
         }
         database.close()
+        resetTestSerialization()
     }
 
     @Test

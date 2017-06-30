@@ -9,10 +9,12 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
+import net.corda.core.serialization.Singletons
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.core.utilities.trace
+import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.VersionInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
@@ -33,6 +35,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.serialization.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -58,7 +61,8 @@ import kotlin.system.exitProcess
 open class Node(override val configuration: FullNodeConfiguration,
                 advertisedServices: Set<ServiceInfo>,
                 val versionInfo: VersionInfo,
-                clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
+                clock: Clock = NodeClock(),
+                val initialiseSerialization: Boolean = true) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
         var renderBasicInfoToConsole = true
@@ -294,6 +298,9 @@ open class Node(override val configuration: FullNodeConfiguration,
     val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
 
     override fun start(): Node {
+        if (!started && initialiseSerialization) {
+            initialiseSerialization()
+        }
         super.start()
 
         networkMapRegistrationFuture.thenMatch({
@@ -323,6 +330,18 @@ open class Node(override val configuration: FullNodeConfiguration,
             stop()
         }
         return this
+    }
+
+    private fun initialiseSerialization() {
+        Singletons.DEFAULT_SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+            //registerScheme(KryoClientSerializationScheme())
+            registerScheme(KryoServerSerializationScheme())
+        }
+        Singletons.P2P_CONTEXT = KRYO_P2P_CONTEXT
+        Singletons.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
+        //Singletons.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
+        Singletons.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
+        Singletons.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
     }
 
     /** Starts a blocking event loop for message dispatch. */

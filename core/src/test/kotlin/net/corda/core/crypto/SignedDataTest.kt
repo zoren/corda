@@ -1,13 +1,29 @@
 package net.corda.core.crypto
 
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertEquals
 
 class SignedDataTest {
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+        serialized = data.serialize()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
+    }
+
     val data = "Just a simple test string"
-    val serialized = data.serialize()
+    lateinit var serialized: SerializedBytes<String>
 
     @Test
     fun `make sure correctly signed data is released`() {

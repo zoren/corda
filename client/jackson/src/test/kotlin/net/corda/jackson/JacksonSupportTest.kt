@@ -7,7 +7,11 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
 import net.corda.core.testing.PublicKeyGenerator
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.security.PublicKey
@@ -18,6 +22,16 @@ import kotlin.test.assertEquals
 class JacksonSupportTest {
     companion object {
         val mapper = JacksonSupport.createNonRpcMapper()
+    }
+
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
     }
 
     @Property

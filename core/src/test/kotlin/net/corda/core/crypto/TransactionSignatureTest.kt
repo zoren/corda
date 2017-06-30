@@ -1,5 +1,9 @@
 package net.corda.core.crypto
 
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
 import java.time.Instant
@@ -9,6 +13,15 @@ import kotlin.test.assertTrue
  * Digital signature MetaData tests
  */
 class TransactionSignatureTest {
+    @Before
+    fun initialise() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun reset() {
+        resetTestSerialization()
+    }
 
     val testBytes = "12345678901234567890123456789012".toByteArray()
 

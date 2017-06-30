@@ -13,7 +13,9 @@ import net.corda.testing.LogHelper
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -28,6 +30,7 @@ class DBTransactionStorageTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
+        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         newTransactionStorage()
     }
@@ -35,6 +38,7 @@ class DBTransactionStorageTests {
     @After
     fun cleanUp() {
         database.close()
+        resetTestSerialization()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

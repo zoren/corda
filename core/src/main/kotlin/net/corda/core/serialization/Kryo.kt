@@ -11,8 +11,9 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.serialization.Singletons.DEFAULT_SERIALIZATION_FACTORY
+import net.corda.core.serialization.Singletons.P2P_CONTEXT
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.LazyPool
 import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -25,7 +26,6 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
@@ -78,10 +78,10 @@ import kotlin.reflect.jvm.javaType
  */
 
 // A convenient instance of Kryo pre-configured with some useful things. Used as a default by various functions.
-fun p2PKryo(): KryoPool = kryoPool
+//fun p2PKryo(): KryoPool = kryoPool
 
 // Same again, but this has whitelisting turned off for internal storage use only.
-fun storageKryo(): KryoPool = internalKryoPool
+//fun storageKryo(): KryoPool = internalKryoPool
 
 
 /**
@@ -89,7 +89,7 @@ fun storageKryo(): KryoPool = internalKryoPool
  * to get the original object back.
  */
 @Suppress("unused") // Type parameter is just for documentation purposes.
-class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = false) : OpaqueBytes(bytes) {
+class SerializedBytes<T : Any>(bytes: ByteArray, val context: SerializationContext? = null) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
 
@@ -97,8 +97,99 @@ class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = fal
 }
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
-private val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray())
+val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray())
 
+object QuasarWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = true
+}
+/*
+private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
+    override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
+        val message = if (closeable is CloseableIterator<*>) {
+            "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
+                    "to a Vault query - move it into a private method."
+        } else {
+            "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
+                    "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                    "confined to a private method or the reference is nulled out."
+        }
+        throw UnsupportedOperationException(message)
+    }
+    override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
+}
+
+class KryoSerializationScheme : SerializationScheme {
+    override fun canDeserializeVersion(byteSequence: ByteSequence): Boolean = byteSequence.equals(KryoHeaderV0_1)
+
+    private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
+
+    private fun getPool(context: SerializationContext): KryoPool {
+        return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
+            when(context.target) {
+             SerializationContext.Target.Quasar ->
+                KryoPool.Builder { val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
+                    DefaultKryoCustomizer.customize(serializer.kryo)
+                    serializer.kryo.addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                    serializer.kryo
+                }.build()
+                SerializationContext.Target.RPC ->
+                    KryoPool.Builder { DefaultKryoCustomizer.customize(RPCKryo(CordaClassResolver(context.whitelist))) }.build()
+                else ->
+                    KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context.whitelist))) }.build()
+            }
+        }
+    }
+
+    private fun <T : Any> withContext(kryo: Kryo, context: SerializationContext, block: (Kryo) -> T): T {
+        kryo.context.ensureCapacity(context.properties.size)
+        context.properties.forEach { kryo.context.put(it.key, it.value) }
+        try {
+            return block(kryo)
+        } finally {
+            kryo.context.clear()
+        }
+    }
+
+    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
+        val pool = getPool(context)
+        Input(byteSequence.bytes, byteSequence.offset, byteSequence.size).use { input ->
+            val header = OpaqueBytes(input.readBytes(8))
+            if (header != KryoHeaderV0_1) {
+                throw KryoException("Serialized bytes header does not match expected format.")
+            }
+            return pool.run { kryo ->
+                withContext(kryo, context) {
+                    @Suppress("UNCHECKED_CAST")
+                    kryo.readClassAndObject(input) as T
+                }
+            }
+        }
+    }
+
+    override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
+        val pool = getPool(context)
+        return pool.run { kryo ->
+            withContext(kryo, context) {
+                serializeOutputStreamPool.run { stream ->
+                    serializeBufferPool.run { buffer ->
+                        Output(buffer).use {
+                            it.outputStream = stream
+                            it.writeBytes(KryoHeaderV0_1.bytes)
+                            if(context.objectReferencesEnabled) {
+                                kryo.writeClassAndObject(it, obj)
+                            } else {
+                                kryo.withoutReferences { kryo.writeClassAndObject(it, obj) }
+                            }
+                        }
+                        SerializedBytes(stream.toByteArray(), context)
+                    }
+                }
+            }
+        }
+    }
+}
+*/
+/*
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
 fun <T : Any> ByteArray.deserialize(kryo: KryoPool = p2PKryo()): T {
     Input(this).use {
@@ -117,17 +208,20 @@ fun <T : Any> ByteArray.deserialize(kryo: Kryo): T = deserialize(kryo.asPool())
 fun <T : Any> OpaqueBytes.deserialize(kryo: KryoPool = p2PKryo()): T {
     return this.bytes.deserialize(kryo)
 }
+*/
 
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
-fun SerializedBytes<WireTransaction>.deserialize(kryo: KryoPool = p2PKryo()): WireTransaction = WireTransaction.deserialize(this, kryo)
+fun SerializedBytes<WireTransaction>.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction = WireTransaction.deserialize(this, serializationFactory, context)
 
+/*
 fun <T : Any> SerializedBytes<T>.deserialize(kryo: KryoPool = if (internalOnly) storageKryo() else p2PKryo()): T = bytes.deserialize(kryo)
 
 fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo): T = bytes.deserialize(kryo.asPool())
 
 // Internal adapter for use when we haven't yet converted to a pool, or for tests.
 private fun Kryo.asPool(): KryoPool = (KryoPool.Builder { this }.build())
+*/
 
 /**
  * A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
@@ -148,19 +242,13 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
  * the type is marked as serializable or was designed for it (so be careful!).
  */
-fun <T : Any> T.serialize(kryo: KryoPool = p2PKryo(), internalOnly: Boolean = false): SerializedBytes<T> {
-    return kryo.run { k -> serialize(k, internalOnly) }
-}
+/*
+fun <T : Any> T.serialize(kryo: KryoPool = p2PKryo()/*, internalOnly: Boolean = false*/): SerializedBytes<T> {
+    return kryo.run { k -> serialize(k, false) }
+}*/
 
 
-private val serializeBufferPool = LazyPool(
-        newInstance = { ByteArray(64 * 1024) }
-)
-private val serializeOutputStreamPool = LazyPool(
-        clear = ByteArrayOutputStream::reset,
-        shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
-        newInstance = { ByteArrayOutputStream(64 * 1024) }
-)
+/*
 fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): SerializedBytes<T> {
     return serializeOutputStreamPool.run { stream ->
         serializeBufferPool.run { buffer ->
@@ -173,6 +261,7 @@ fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): Serialized
         }
     }
 }
+*/
 
 /**
  * Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
