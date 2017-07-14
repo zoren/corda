@@ -29,6 +29,16 @@ interface IdentityService {
     fun registerIdentity(party: PartyAndCertificate)
 
     /**
+     * Verify and then store a trusted identity, without requiring that it has a certificate or path. This would generally
+     * be used for trust roots or other legal entities/services which trusted by policy rather than certificate validation.
+     *
+     * @param party a party representing a legal entity.
+     */
+    // TODO: Remove once we can issue certificates to services from the Doorman
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun registerIdentityUnchecked(party: PartyAndCertificate)
+
+    /**
      * Verify and then store an identity.
      *
      * @param anonymousParty a party representing a legal entity in a transaction.

@@ -70,6 +70,10 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate> = emptyS
         log.trace { "Registering identity $party" }
         require(Arrays.equals(party.certificate.subjectPublicKeyInfo.encoded, party.owningKey.encoded)) { "Party certificate must end with party's public key" }
 
+        registerIdentityUnchecked(party)
+    }
+
+    override fun registerIdentityUnchecked(party: PartyAndCertificate) {
         partyToPath[party.party] = party.certPath
         keyToParties[party.owningKey] = party
         principalToParties[party.name] = party
