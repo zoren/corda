@@ -4,13 +4,8 @@ import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -202,17 +197,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     }
 }
 
-class IRSTests {
-    @Before
-    fun setUp() {
-        initialiseTestSerialization()
-    }
-
-    @After
-    fun tearDown() {
-        resetTestSerialization()
-    }
-
+class IRSTests : TestDependencyInjectionBase() {
     val megaCorpServices = MockServices(MEGA_CORP_KEY)
     val miniCorpServices = MockServices(MINI_CORP_KEY)
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)

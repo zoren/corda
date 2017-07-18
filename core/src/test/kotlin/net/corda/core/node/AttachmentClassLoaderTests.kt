@@ -8,7 +8,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
-import net.corda.core.serialization.Singletons.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP

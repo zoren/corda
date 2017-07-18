@@ -8,9 +8,8 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -26,14 +25,13 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint> {
     return checkpoints
 }
 
-class DBCheckpointStorageTests {
+class DBCheckpointStorageTests : TestDependencyInjectionBase() {
     lateinit var checkpointStorage: DBCheckpointStorage
     lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         newCheckpointStorage()
     }
@@ -41,7 +39,6 @@ class DBCheckpointStorageTests {
     @After
     fun cleanUp() {
         database.close()
-        resetTestSerialization()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

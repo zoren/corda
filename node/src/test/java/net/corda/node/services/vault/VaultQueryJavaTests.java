@@ -25,6 +25,7 @@ import net.corda.node.services.schema.NodeSchemaService;
 import net.corda.node.utilities.CordaPersistence;
 import net.corda.schemas.CashSchemaV1;
 import net.corda.testing.TestConstants;
+import net.corda.testing.TestDependencyInjectionBase;
 import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.testing.contracts.VaultFiller;
 import net.corda.testing.node.MockServices;
@@ -50,12 +51,10 @@ import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZ
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.node.utilities.CordaPersistenceKt.configureDatabase;
 import static net.corda.testing.CoreTestUtils.*;
-import static net.corda.testing.SerializationTestHelpersKt.initialiseTestSerialization;
-import static net.corda.testing.SerializationTestHelpersKt.resetTestSerialization;
 import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class VaultQueryJavaTests {
+public class VaultQueryJavaTests extends TestDependencyInjectionBase {
 
     private MockServices services;
     private VaultService vaultSvc;
@@ -64,7 +63,6 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() {
-        initialiseTestSerialization();
         Properties dataSourceProps = makeTestDataSourceProperties(SecureHash.randomSHA256().toString());
         database = configureDatabase(dataSourceProps);
 
@@ -104,7 +102,6 @@ public class VaultQueryJavaTests {
     @After
     public void cleanUp() throws IOException {
         database.close();
-        resetTestSerialization();
     }
 
     /**

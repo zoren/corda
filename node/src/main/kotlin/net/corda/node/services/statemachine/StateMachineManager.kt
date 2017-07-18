@@ -19,8 +19,8 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
-import net.corda.core.serialization.Singletons.CHECKPOINT_CONTEXT
-import net.corda.core.serialization.Singletons.DEFAULT_SERIALIZATION_FACTORY
+import net.corda.core.serialization.SerializationDefaults.CHECKPOINT_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.then
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -168,7 +168,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
     private val serializationContext by lazy {
-        SerializeAsTokenContext(tokenizableServices, DEFAULT_SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
+        SerializeAsTokenContext(tokenizableServices, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub)
     }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */

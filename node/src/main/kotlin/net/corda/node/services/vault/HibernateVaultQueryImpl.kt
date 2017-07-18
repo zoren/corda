@@ -13,8 +13,8 @@ import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.Singletons.STORAGE_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor

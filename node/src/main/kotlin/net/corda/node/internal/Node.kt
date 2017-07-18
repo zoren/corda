@@ -10,7 +10,7 @@ import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
-import net.corda.core.serialization.Singletons
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.thenMatch
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -335,13 +335,13 @@ open class Node(override val configuration: FullNodeConfiguration,
     }
 
     private fun initialiseSerialization() {
-        Singletons.DEFAULT_SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+        SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
             registerScheme(KryoServerSerializationScheme())
         }
-        Singletons.P2P_CONTEXT = KRYO_P2P_CONTEXT
-        Singletons.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
-        Singletons.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
-        Singletons.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
+        SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+        SerializationDefaults.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
+        SerializationDefaults.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
+        SerializationDefaults.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
     }
 
     /** Starts a blocking event loop for message dispatch. */

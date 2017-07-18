@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.Singletons
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -88,10 +88,10 @@ class Verifier {
         }
 
         private fun initialiseSerialization() {
-            Singletons.DEFAULT_SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+            SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
                 registerScheme(KryoVerifierSerializationScheme)
             }
-            Singletons.P2P_CONTEXT = KRYO_P2P_CONTEXT
+            SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
         }
     }
 

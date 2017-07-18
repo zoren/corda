@@ -3,7 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
-import net.corda.core.serialization.Singletons.STORAGE_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace

@@ -10,6 +10,7 @@ import com.google.common.collect.testing.features.MapFeature
 import com.google.common.collect.testing.features.SetFeature
 import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.resetTestSerialization
@@ -202,7 +203,7 @@ class JDBCHashMapTestSuite {
      *
      * If the Map reloads, then so will the Set as it just delegates.
      */
-    class MapCanBeReloaded {
+    class MapCanBeReloaded : TestDependencyInjectionBase() {
         private val ops = listOf(Triple(AddOrRemove.ADD, "A", "1"),
                 Triple(AddOrRemove.ADD, "B", "2"),
                 Triple(AddOrRemove.ADD, "C", "3"),
@@ -231,16 +232,13 @@ class JDBCHashMapTestSuite {
 
         @Before
         fun before() {
-            initialiseTestSerialization()
             database = configureDatabase(makeTestDataSourceProperties())
         }
 
         @After
         fun after() {
             database.close()
-            resetTestSerialization()
         }
-
 
         @Test
         fun `fill map and check content after reconstruction`() {

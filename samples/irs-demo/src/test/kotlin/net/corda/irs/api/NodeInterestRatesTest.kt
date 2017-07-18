@@ -14,7 +14,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.CordaPersistence
@@ -34,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
-class NodeInterestRatesTest {
+class NodeInterestRatesTest : TestDependencyInjectionBase() {
     val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685
@@ -61,7 +60,6 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         database.transaction {
             oracle = NodeInterestRates.Oracle(
@@ -75,7 +73,6 @@ class NodeInterestRatesTest {
     @After
     fun tearDown() {
         database.close()
-        resetTestSerialization()
     }
 
     @Test

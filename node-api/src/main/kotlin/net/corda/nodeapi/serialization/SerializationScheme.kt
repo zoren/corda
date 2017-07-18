@@ -74,10 +74,6 @@ open class SerializationFactoryImpl : SerializationFactory {
         }
     }
 
-    private val _currentContext = ThreadLocal<SerializationContext>()
-    override val currentContext: SerializationContext
-        get() = _currentContext.get() ?: throw IllegalStateException("Current serializarion context not set.")
-
     @Throws(NotSerializableException::class)
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = schemeFor(byteSequence, context.target).deserialize(byteSequence, clazz, context)
 
@@ -127,7 +123,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     private fun getPool(context: SerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             when (context.target) {
-                SerializationContext.Target.Quasar ->
+                SerializationContext.Target.Checkpoint ->
                     KryoPool.Builder {
                         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
                         val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
@@ -219,35 +215,35 @@ val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteAr
 
 
 val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        Singletons.javaClass.classLoader,
+        SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.Target.P2P)
 val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        Singletons.javaClass.classLoader,
+        SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.Target.RPCServer)
 val KRYO_RPC_CLIENT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        Singletons.javaClass.classLoader,
+        SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.Target.RPCClient)
 val KRYO_STORAGE_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        Singletons.javaClass.classLoader,
+        SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.Target.Storage)
 val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
-        Singletons.javaClass.classLoader,
+        SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,
         emptyMap(),
         true,
-        SerializationContext.Target.Quasar)
+        SerializationContext.Target.Checkpoint)
 
 object QuasarWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true

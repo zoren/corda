@@ -15,7 +15,7 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.RPCOps
 import net.corda.core.seconds
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.Singletons.RPC_SERVER_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.utilities.*
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*

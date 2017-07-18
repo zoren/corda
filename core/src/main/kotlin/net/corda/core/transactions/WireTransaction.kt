@@ -9,8 +9,8 @@ import net.corda.core.identity.Party
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
-import net.corda.core.serialization.Singletons.DEFAULT_SERIALIZATION_FACTORY
-import net.corda.core.serialization.Singletons.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.security.SignatureException
@@ -46,7 +46,7 @@ class WireTransaction(
     override val id: SecureHash by lazy { merkleTree.hash }
 
     companion object {
-        fun deserialize(data: SerializedBytes<WireTransaction>, serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction {
+        fun deserialize(data: SerializedBytes<WireTransaction>, serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction {
             val wtx = data.deserialize<WireTransaction>(serializationFactory, context)
             wtx.cachedBytes = data
             return wtx

@@ -77,7 +77,6 @@ class TwoPartyTradeFlowTests {
     fun after() {
         mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
-        mockNet.stopNodes()
     }
 
     @Test

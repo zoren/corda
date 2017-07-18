@@ -33,7 +33,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class NodeVaultServiceTest {
+class NodeVaultServiceTest : TestDependencyInjectionBase() {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence
@@ -41,7 +41,6 @@ class NodeVaultServiceTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
@@ -62,7 +61,6 @@ class NodeVaultServiceTest {
     @After
     fun tearDown() {
         database.close()
-        resetTestSerialization()
         LogHelper.reset(NodeVaultService::class)
     }
 

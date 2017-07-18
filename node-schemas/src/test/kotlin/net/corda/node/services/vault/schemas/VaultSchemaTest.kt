@@ -8,9 +8,8 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
@@ -22,12 +21,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.vault.schemas.requery.*
-import net.corda.testing.initialiseTestSerialization
-import net.corda.testing.resetTestSerialization
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
@@ -42,7 +37,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class VaultSchemaTest {
+class VaultSchemaTest : TestDependencyInjectionBase() {
 
     var instance: KotlinEntityDataStore<Persistable>? = null
     val data: KotlinEntityDataStore<Persistable> get() = instance!!
@@ -54,7 +49,6 @@ class VaultSchemaTest {
 
     @Before
     fun setup() {
-        initialiseTestSerialization()
         val dataSource = JdbcDataSource()
         dataSource.setURL("jdbc:h2:mem:vault_persistence;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1")
         val configuration = KotlinConfiguration(dataSource = dataSource, model = Models.VAULT, mapping = setupCustomMapping(), useDefaultLogging = true)
@@ -80,7 +74,6 @@ class VaultSchemaTest {
     @After
     fun tearDown() {
         data.close()
-        resetTestSerialization()
     }
 
     private class VaultNoopContract : Contract {

@@ -41,7 +41,7 @@ import javax.persistence.EntityManager
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 
-class HibernateConfigurationTest {
+class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
     lateinit var services: MockServices
     lateinit var database: CordaPersistence
@@ -59,7 +59,6 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         val customSchemas = setOf(VaultSchemaV1, CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3)
@@ -94,7 +93,6 @@ class HibernateConfigurationTest {
     @After
     fun cleanUp() {
         database.close()
-        resetTestSerialization()
     }
 
     private fun setUpDb() {

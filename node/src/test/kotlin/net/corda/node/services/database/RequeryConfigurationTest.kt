@@ -23,10 +23,9 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_PUBKEY_1
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -36,7 +35,7 @@ import org.junit.Test
 import java.time.Instant
 import java.util.*
 
-class RequeryConfigurationTest {
+class RequeryConfigurationTest : TestDependencyInjectionBase() {
 
     lateinit var database: CordaPersistence
     lateinit var transactionStorage: DBTransactionStorage
@@ -44,7 +43,6 @@ class RequeryConfigurationTest {
 
     @Before
     fun setUp() {
-        initialiseTestSerialization()
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties)
         newTransactionStorage()
@@ -54,7 +52,6 @@ class RequeryConfigurationTest {
     @After
     fun cleanUp() {
         database.close()
-        resetTestSerialization()
     }
 
     @Test

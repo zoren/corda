@@ -4,8 +4,8 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.client.rpc.serialization.KryoClientSerializationScheme
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.serialization.Singletons
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
@@ -69,15 +69,15 @@ class CordaRPCClient(
     companion object {
         fun initialiseSerialization() {
             try {
-                Singletons.DEFAULT_SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
+                SerializationDefaults.SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
                     registerScheme(KryoClientSerializationScheme())
                 }
-                Singletons.P2P_CONTEXT = KRYO_P2P_CONTEXT
-                Singletons.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
+                SerializationDefaults.P2P_CONTEXT = KRYO_P2P_CONTEXT
+                SerializationDefaults.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
             } catch(e: IllegalStateException) {
                 // Check that it's registered as we expect
-                check(Singletons.DEFAULT_SERIALIZATION_FACTORY is SerializationFactoryImpl) { "RPC client encountered conflicting configuration of serialization subsystem." }
-                check((Singletons.DEFAULT_SERIALIZATION_FACTORY as SerializationFactoryImpl).alreadyRegisteredSchemes.firstOrNull { it is KryoClientSerializationScheme } != null) { "RPC client encountered conflicting configuration of serialization subsystem." }
+                check(SerializationDefaults.SERIALIZATION_FACTORY is SerializationFactoryImpl) { "RPC client encountered conflicting configuration of serialization subsystem." }
+                check((SerializationDefaults.SERIALIZATION_FACTORY as SerializationFactoryImpl).alreadyRegisteredSchemes.firstOrNull { it is KryoClientSerializationScheme } != null) { "RPC client encountered conflicting configuration of serialization subsystem." }
             }
         }
     }

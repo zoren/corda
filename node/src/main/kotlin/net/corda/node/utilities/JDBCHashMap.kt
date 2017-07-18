@@ -1,7 +1,7 @@
 package net.corda.node.utilities
 
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.Singletons.STORAGE_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor

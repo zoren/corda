@@ -6,18 +6,16 @@ import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.LogHelper
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.generateStateRef
-import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests {
+class PersistentUniquenessProviderTests : TestDependencyInjectionBase() {
     val identity = MEGA_CORP
     val txID = SecureHash.randomSHA256()
 
@@ -26,14 +24,12 @@ class PersistentUniquenessProviderTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
     }
 
     @After
     fun tearDown() {
         database.close()
-        resetTestSerialization()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

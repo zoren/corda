@@ -8,14 +8,13 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.LogHelper
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.freeLocalHostAndPort
-import net.corda.testing.initialiseTestSerialization
 import net.corda.testing.node.makeTestDataSourceProperties
-import net.corda.testing.resetTestSerialization
 import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
@@ -24,7 +23,7 @@ import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DistributedImmutableMapTests {
+class DistributedImmutableMapTests : TestDependencyInjectionBase() {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     lateinit var cluster: List<Member>
@@ -35,7 +34,6 @@ class DistributedImmutableMapTests {
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        initialiseTestSerialization()
         database = configureDatabase(makeTestDataSourceProperties())
         cluster = setUpCluster()
     }
@@ -49,7 +47,6 @@ class DistributedImmutableMapTests {
             it.server.shutdown()
         }
         database.close()
-        resetTestSerialization()
     }
 
     @Test

@@ -2,8 +2,8 @@ package net.corda.core.serialization
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.serialization.Singletons.DEFAULT_SERIALIZATION_FACTORY
-import net.corda.core.serialization.Singletons.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
+import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -25,13 +25,11 @@ interface SerializationScheme {
 }
 
 interface SerializationFactory {
-    val currentContext: SerializationContext
+    @Throws(NotSerializableException::class)
+    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext = currentContext): T
-
-    @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T, context: SerializationContext = currentContext): SerializedBytes<T>
+    fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T>
 }
 
 interface SerializationContext {
@@ -47,7 +45,7 @@ interface SerializationContext {
     fun withClassLoader(classLoader: ClassLoader): SerializationContext
     fun withWhitelisted(clazz: Class<*>): SerializationContext
 
-    enum class Target { P2P, RPCServer, RPCClient, Storage, Quasar }
+    enum class Target { P2P, RPCServer, RPCClient, Storage, Checkpoint }
 }
 
 class WriteOnceProperty<T : Any>() {
@@ -61,8 +59,8 @@ class WriteOnceProperty<T : Any>() {
     }
 }
 
-object Singletons {
-    var DEFAULT_SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
+object SerializationDefaults {
+    var SERIALIZATION_FACTORY: SerializationFactory by WriteOnceProperty()
     var P2P_CONTEXT: SerializationContext by WriteOnceProperty()
     var RPC_SERVER_CONTEXT: SerializationContext by WriteOnceProperty()
     var RPC_CLIENT_CONTEXT: SerializationContext by WriteOnceProperty()
@@ -70,19 +68,19 @@ object Singletons {
     var CHECKPOINT_CONTEXT: SerializationContext by WriteOnceProperty()
 }
 
-inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
+inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
+inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
-fun <T : Any> T.serialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): SerializedBytes<T> {
+fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): SerializedBytes<T> {
     return serializationFactory.serialize(this, context)
 }
 
-inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T = this.opaque().deserialize(serializationFactory, context)
+inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T = this.opaque().deserialize(serializationFactory, context)
 
 
 /**
@@ -99,4 +97,4 @@ class SerializedBytes<T : Any>(bytes: ByteArray, val context: SerializationConte
 
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
-fun SerializedBytes<WireTransaction>.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction = WireTransaction.deserialize(this, serializationFactory, context)
+fun SerializedBytes<WireTransaction>.deserialize(serializationFactory: SerializationFactory = SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction = WireTransaction.deserialize(this, serializationFactory, context)

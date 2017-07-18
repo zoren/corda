@@ -9,7 +9,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.millis
 import net.corda.core.seconds
-import net.corda.core.serialization.Singletons
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -326,7 +326,7 @@ class RPCStabilityTests {
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
                     arguments = listOf(10.millis, 123456)
             )
-            request.writeToClientMessage(Singletons.RPC_SERVER_CONTEXT, message)
+            request.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
             producer.send(message)
             session.commit()
 
