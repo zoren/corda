@@ -88,7 +88,7 @@ inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: Seriali
  * to get the original object back.
  */
 @Suppress("unused") // Type parameter is just for documentation purposes.
-class SerializedBytes<T : Any>(bytes: ByteArray, val context: SerializationContext? = null) : OpaqueBytes(bytes) {
+class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
 

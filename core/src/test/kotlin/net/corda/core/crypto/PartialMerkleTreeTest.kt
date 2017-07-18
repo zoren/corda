@@ -8,18 +8,13 @@ import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
-import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.util.function.Predicate
 import kotlin.test.*
 
-class PartialMerkleTreeTest {
+class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     val nodes = "abcdef"
     val hashed = nodes.map {
         initialiseTestSerialization()
@@ -59,16 +54,6 @@ class PartialMerkleTreeTest {
 
     val txs = testLedger.interpreter.transactionsToVerify
     val testTx = txs[0]
-
-    @Before
-    fun setup() {
-        initialiseTestSerialization()
-    }
-
-    @After
-    fun reset() {
-        resetTestSerialization()
-    }
 
     // Building full Merkle Tree tests.
     @Test

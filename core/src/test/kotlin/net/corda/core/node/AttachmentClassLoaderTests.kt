@@ -12,13 +12,10 @@ import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.node.MockAttachmentStorage
-import net.corda.testing.resetTestSerialization
 import org.apache.commons.io.IOUtils
-import org.junit.After
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -38,7 +35,7 @@ interface DummyContractBackdoor {
 
 val ATTACHMENT_TEST_PROGRAM_ID = AttachmentClassLoaderTests.AttachmentDummyContract()
 
-class AttachmentClassLoaderTests {
+class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
 
@@ -89,16 +86,6 @@ class AttachmentClassLoaderTests {
     }
 
     class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
-
-    @Before
-    fun setup() {
-        initialiseTestSerialization()
-    }
-
-    @After
-    fun reset() {
-        resetTestSerialization()
-    }
 
     @Test
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {

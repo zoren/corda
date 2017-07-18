@@ -193,7 +193,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
                                 kryo.withoutReferences { kryo.writeClassAndObject(it, obj) }
                             }
                         }
-                        SerializedBytes(stream.toByteArray(), context)
+                        SerializedBytes(stream.toByteArray())
                     }
                 }
             }

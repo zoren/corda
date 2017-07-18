@@ -78,36 +78,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
-    /*
-    private val quasarKryoPool = KryoPool.Builder {
-        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
-        // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-        val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
-        serializer.kryo.apply {
-            field.set(this, classResolver)
-            DefaultKryoCustomizer.customize(this)
-            addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-        }
-    }.build()
-
-    // TODO Move this into the blacklist and upgrade the blacklist to allow custom messages
-    private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
-        override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
-            val message = if (closeable is CloseableIterator<*>) {
-                "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
-                        "to a Vault query - move it into a private method."
-            } else {
-                "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
-                        "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
-                        "confined to a private method or the reference is nulled out."
-            }
-            throw UnsupportedOperationException(message)
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
-    }*/
-
     companion object {
         private val logger = loggerFor<StateMachineManager>()
         internal val sessionTopic = TopicSession("platform.session")

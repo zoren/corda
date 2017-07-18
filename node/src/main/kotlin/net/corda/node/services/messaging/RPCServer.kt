@@ -299,8 +299,7 @@ class RPCServer(
                 clientAddress,
                 serverControl!!,
                 sessionAndProducerPool,
-                observationSendExecutor!!/*,
-                kryoPool*/
+                observationSendExecutor!!
         )
 
         val buffered = bufferIfQueueNotBound(clientAddress, reply, observableContext)

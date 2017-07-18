@@ -1,8 +1,6 @@
 package net.corda.contracts.asset
 
-import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -10,24 +8,25 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.*
+import net.corda.testing.contracts.DummyState
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
 import kotlin.test.*
 
-class CashTests {
+class CashTests : TestDependencyInjectionBase() {
     val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val inState = Cash.State(
@@ -50,7 +49,6 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        initialiseTestSerialization()
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps)
         database.transaction {
@@ -78,11 +76,6 @@ class CashTests {
 
             vaultStatesUnconsumed = miniCorpServices.vaultService.unconsumedStates<Cash.State>().toList()
         }
-        resetTestSerialization()
-    }
-
-    @After
-    fun reset() {
         resetTestSerialization()
     }
 
