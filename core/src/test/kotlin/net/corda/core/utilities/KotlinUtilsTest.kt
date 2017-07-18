@@ -4,10 +4,24 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.testing.initialiseTestSerialization
+import net.corda.testing.resetTestSerialization
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 class KotlinUtilsTest {
+    @Before
+    fun setup() {
+        initialiseTestSerialization()
+    }
+
+    @After
+    fun teadDown() {
+        resetTestSerialization()
+    }
+
     @Test
     fun `transient property which is null`() {
         val test = NullTransientProperty()
