@@ -7,10 +7,10 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.nodeapi.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.serialization.SerializationContextImpl
 import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -29,11 +29,6 @@ class SerializationTokenTest {
                 emptyMap(),
                 true,
                 SerializationContext.Target.P2P)
-    }
-
-    @After
-    fun cleanup() {
-        //storageKryo().release(kryo)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized

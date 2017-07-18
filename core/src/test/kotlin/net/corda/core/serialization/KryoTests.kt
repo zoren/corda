@@ -5,6 +5,7 @@ import net.corda.core.crypto.*
 import net.corda.core.utilities.opaque
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.nodeapi.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.serialization.SerializationContextImpl
 import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import net.corda.testing.ALICE
@@ -25,15 +26,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class KryoTests {
-
-    //private lateinit var kryo: Kryo
     private lateinit var factory: SerializationFactory
     private lateinit var context: SerializationContext
 
     @Before
     fun setup() {
-        // We deliberately do not return this, since we do some unorthodox registering below and do not want to pollute the pool.
-        //kryo = p2PKryo().borrow()
         factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
         context = SerializationContextImpl(KryoHeaderV0_1,
                 javaClass.classLoader,
@@ -61,7 +58,6 @@ class KryoTests {
     @Test
     fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
         val noReferencesContext = context.withoutReferences()
-        //kryo.noReferencesWithin<ArrayList<*>>()
         val obj = Ints.toByteArray(0x01234567).opaque()
         val originalList = arrayListOf(obj)
         val deserialisedList = originalList.serialize(factory, noReferencesContext).deserialize(factory, noReferencesContext)
@@ -73,7 +69,6 @@ class KryoTests {
     @Test
     fun `serialised form is stable when the same object instance occurs more than once, and using java serialisation`() {
         val noReferencesContext = context.withoutReferences()
-        //kryo.noReferencesWithin<ArrayList<*>>()
         val instant = Instant.ofEpochMilli(123)
         val instantCopy = Instant.ofEpochMilli(123)
         assertThat(instant).isNotSameAs(instantCopy)

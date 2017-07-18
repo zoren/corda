@@ -74,9 +74,6 @@ class RPCClientProxyHandler(
 
     private companion object {
         val log = loggerFor<RPCClientProxyHandler>()
-        // Note that this KryoPool is not yet capable of deserialising Observables, it requires Proxy-specific context
-        // to do that. However it may still be used for serialisation of RPC requests and related messages.
-        //val kryoPool: KryoPool = KryoPool.Builder { RPCKryo(RpcClientObservableSerializer) }.build()
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
     }
@@ -109,9 +106,7 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<RPCApi.ObservableId>()
     })
-    // A Kryo pool that automatically adds the observable context when an instance is requested.
-    //private val kryoPoolWithObservableContext = RpcClientObservableSerializer.createPoolWithContext(kryoPool, observableContext)
-    private val contextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)//RpcServerObservableSerializer.createPoolWithContext(kryoPool, this)
+    private val contextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<RPCApi.ObservableId, UnicastSubject<Notification<Any>>> {
@@ -360,10 +355,6 @@ data class ObservableContext(
  */
 object RpcClientObservableSerializer : Serializer<Observable<Any>>() {
     private object RpcObservableContextKey
-    /*
-    fun createPoolWithContext(kryoPool: KryoPool, observableContext: ObservableContext): KryoPool {
-        return KryoPoolWithContext(kryoPool, RpcObservableContextKey, observableContext)
-    }*/
 
     fun createContext(serializationContext: SerializationContext, observableContext: ObservableContext): SerializationContext {
         return serializationContext.withProperty(RpcObservableContextKey, observableContext)

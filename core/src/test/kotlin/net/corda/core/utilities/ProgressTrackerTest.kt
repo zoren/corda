@@ -5,10 +5,10 @@ import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.AllWhitelist
-import net.corda.core.serialization.KryoHeaderV0_1
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.nodeapi.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.serialization.SerializationContextImpl
 import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import org.junit.Before

@@ -1,10 +1,5 @@
 package net.corda.client.rpc
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
@@ -12,9 +7,9 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.future
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
-import net.corda.core.serialization.Singletons
 import net.corda.core.millis
 import net.corda.core.seconds
+import net.corda.core.serialization.Singletons
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -305,16 +300,8 @@ class RPCStabilityTests {
             return Observable.interval(interval.toMillis(), TimeUnit.MILLISECONDS).map { chunk }
         }
     }
-    val dummyObservableSerialiser = object : Serializer<Observable<Any>>() {
-        override fun write(kryo: Kryo?, output: Output?, `object`: Observable<Any>?) {
-        }
-        override fun read(kryo: Kryo?, input: Input?, type: Class<Observable<Any>>?): Observable<Any> {
-            return Observable.empty()
-        }
-    }
     @Test
     fun `slow consumers are kicked`() {
-        //val kryoPool = KryoPool.Builder { RPCKryo(dummyObservableSerialiser) }.build()
         rpcDriver {
             val server = startRpcServer(maxBufferedBytesPerClient = 10 * 1024 * 1024, ops = SlowConsumerRPCOpsImpl()).get()
 

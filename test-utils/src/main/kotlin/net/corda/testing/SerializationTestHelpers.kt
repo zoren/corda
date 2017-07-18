@@ -69,8 +69,6 @@ fun initialiseTestSerialization() {
     (Singletons.RPC_CLIENT_CONTEXT as TestSerializationContext).delegate = KRYO_RPC_CLIENT_CONTEXT
     (Singletons.STORAGE_CONTEXT as TestSerializationContext).delegate = KRYO_STORAGE_CONTEXT
     (Singletons.CHECKPOINT_CONTEXT as TestSerializationContext).delegate = KRYO_CHECKPOINT_CONTEXT
-//
-//    println("SET")
 }
 
 fun resetTestSerialization() {
@@ -80,7 +78,6 @@ fun resetTestSerialization() {
     (Singletons.RPC_CLIENT_CONTEXT as TestSerializationContext).delegate = null
     (Singletons.STORAGE_CONTEXT as TestSerializationContext).delegate = null
     (Singletons.CHECKPOINT_CONTEXT as TestSerializationContext).delegate = null
-//    println("UNSET")
 }
 
 class TestSerializationFactory : SerializationFactory {

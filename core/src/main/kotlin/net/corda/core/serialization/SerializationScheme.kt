@@ -1,10 +1,16 @@
 package net.corda.core.serialization
 
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.serialization.Singletons.DEFAULT_SERIALIZATION_FACTORY
 import net.corda.core.serialization.Singletons.P2P_CONTEXT
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.opaque
 import java.io.NotSerializableException
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.reflect.KProperty
 
 interface SerializationScheme {
@@ -77,3 +83,20 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = DEFAULT_S
 }
 
 inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): T = this.opaque().deserialize(serializationFactory, context)
+
+
+/**
+ * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
+ * to get the original object back.
+ */
+@Suppress("unused") // Type parameter is just for documentation purposes.
+class SerializedBytes<T : Any>(bytes: ByteArray, val context: SerializationContext? = null) : OpaqueBytes(bytes) {
+    // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
+    val hash: SecureHash by lazy { bytes.sha256() }
+
+    fun writeToFile(path: Path): Path = Files.write(path, bytes)
+}
+
+// The more specific deserialize version results in the bytes being cached, which is faster.
+@JvmName("SerializedBytesWireTransaction")
+fun SerializedBytes<WireTransaction>.deserialize(serializationFactory: SerializationFactory = DEFAULT_SERIALIZATION_FACTORY, context: SerializationContext = P2P_CONTEXT): WireTransaction = WireTransaction.deserialize(this, serializationFactory, context)

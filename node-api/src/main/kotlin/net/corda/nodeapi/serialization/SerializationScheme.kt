@@ -214,6 +214,10 @@ private val serializeOutputStreamPool = LazyPool(
         newInstance = { ByteArrayOutputStream(64 * 1024) }
 )
 
+// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
+val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray())
+
+
 val KRYO_P2P_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         Singletons.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
@@ -244,3 +248,7 @@ val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(KryoHeaderV0_1,
         emptyMap(),
         true,
         SerializationContext.Target.Quasar)
+
+object QuasarWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = true
+}

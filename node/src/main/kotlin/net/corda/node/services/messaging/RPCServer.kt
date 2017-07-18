@@ -79,7 +79,6 @@ class RPCServer(
 ) {
     private companion object {
         val log = loggerFor<RPCServer>()
-        //val kryoPool = KryoPool.Builder { RPCKryo(RpcServerObservableSerializer) }.build()
     }
     private enum class State {
         UNSTARTED,
@@ -383,8 +382,7 @@ class ObservableContext(
         val clientAddress: SimpleString,
         val serverControl: ActiveMQServerControl,
         val sessionAndProducerPool: LazyStickyPool<ArtemisProducer>,
-        val observationSendExecutor: ExecutorService/*,
-        kryoPool: KryoPool*/
+        val observationSendExecutor: ExecutorService
 ) {
     private companion object {
         val log = loggerFor<ObservableContext>()
@@ -410,11 +408,6 @@ class ObservableContext(
 object RpcServerObservableSerializer : Serializer<Observable<Any>>() {
     private object RpcObservableContextKey
     private val log = loggerFor<RpcServerObservableSerializer>()
-
-    /*
-    fun createPoolWithContext(kryoPool: KryoPool, observableContext: ObservableContext): KryoPool {
-        return KryoPoolWithContext(kryoPool, RpcObservableContextKey, observableContext)
-    }*/
 
     fun createContext(observableContext: ObservableContext): SerializationContext {
         return RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)

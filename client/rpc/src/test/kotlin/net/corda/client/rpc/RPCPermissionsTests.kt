@@ -35,9 +35,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     /**
      * Create an RPC proxy for the given user.
      */
-    private fun RPCDriverExposedDSLInterface.testProxyFor(rpcUser: User): TestOps {
-        return testProxy<TestOps>(TestOpsImpl(), rpcUser).ops
-    }
+    private fun RPCDriverExposedDSLInterface.testProxyFor(rpcUser: User) = testProxy<TestOps>(TestOpsImpl(), rpcUser).ops
 
     private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
 

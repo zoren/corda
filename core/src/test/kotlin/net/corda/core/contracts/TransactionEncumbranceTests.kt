@@ -6,8 +6,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -15,16 +13,6 @@ import java.time.temporal.ChronoUnit
 val TEST_TIMELOCK_ID = TransactionEncumbranceTests.DummyTimeLock()
 
 class TransactionEncumbranceTests {
-    @Before
-    fun initialise() {
-        //initialiseTestSerialization()
-    }
-
-    @After
-    fun reset() {
-        //resetTestSerialization()
-    }
-
     val defaultIssuer = MEGA_CORP.ref(1)
 
     val state = Cash.State(

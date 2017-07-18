@@ -4,18 +4,20 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
+import net.corda.core.flatMap
 import net.corda.core.messaging.RPCOps
+import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.serialization.Singletons
+import net.corda.core.thenMatch
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.core.utilities.trace
-import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.VersionInfo
+import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -334,12 +336,10 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private fun initialiseSerialization() {
         Singletons.DEFAULT_SERIALIZATION_FACTORY = SerializationFactoryImpl().apply {
-            //registerScheme(KryoClientSerializationScheme())
             registerScheme(KryoServerSerializationScheme())
         }
         Singletons.P2P_CONTEXT = KRYO_P2P_CONTEXT
         Singletons.RPC_SERVER_CONTEXT = KRYO_RPC_SERVER_CONTEXT
-        //Singletons.RPC_CLIENT_CONTEXT = KRYO_RPC_CLIENT_CONTEXT
         Singletons.STORAGE_CONTEXT = KRYO_STORAGE_CONTEXT
         Singletons.CHECKPOINT_CONTEXT = KRYO_CHECKPOINT_CONTEXT
     }

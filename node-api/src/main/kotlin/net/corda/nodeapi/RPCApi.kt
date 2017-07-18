@@ -177,7 +177,7 @@ object RPCApi {
                 return when (tag) {
                     RPCApi.ServerToClient.Tag.RPC_REPLY -> {
                         val id = RpcRequestId(message.getLongProperty(RPC_ID_FIELD_NAME))
-                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)//KryoPoolWithContext(kryoPool, RpcRequestOrObservableIdKey, id.toLong)
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
                         RpcReply(
                                 id = id,
                                 result = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
@@ -185,7 +185,7 @@ object RPCApi {
                     }
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {
                         val id = ObservableId(message.getLongProperty(OBSERVABLE_ID_FIELD_NAME))
-                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)//KryoPoolWithContext(kryoPool, RpcRequestOrObservableIdKey, id.toLong)
+                        val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id.toLong)
                         Observation(
                                 id = id,
                                 content = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)

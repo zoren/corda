@@ -90,14 +90,8 @@ class AttachmentClassLoaderTests {
 
     class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
 
-    //lateinit var kryo: Kryo
-    //lateinit var kryo2: Kryo
-
     @Before
     fun setup() {
-        // Do not release these back to the pool, since we do some unorthodox modifications to them below.
-        //kryo = p2PKryo().borrow()
-        //kryo2 = p2PKryo().borrow()
         initialiseTestSerialization()
     }
 
@@ -236,8 +230,6 @@ class AttachmentClassLoaderTests {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        //kryo.classLoader = cl
-        //kryo.addToWhitelist(contract.javaClass)
         val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(contract.javaClass)
         val state2 = bytes.deserialize(context = context)
         assertTrue(state2.javaClass.classLoader is AttachmentsClassLoader)
@@ -254,7 +246,6 @@ class AttachmentClassLoaderTests {
 
         assertNotNull(data.contract)
 
-        //kryo2.addToWhitelist(data.contract.javaClass)
         val context2 = P2P_CONTEXT.withWhitelisted(data.contract.javaClass)
 
         val bytes = data.serialize(context = context2)
@@ -267,8 +258,6 @@ class AttachmentClassLoaderTests {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        //kryo.classLoader = cl
-        //kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
         val context = P2P_CONTEXT.withClassLoader(cl).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
 
         val state2 = bytes.deserialize(context = context)
@@ -278,8 +267,6 @@ class AttachmentClassLoaderTests {
         // We should be able to load same class from a different class loader and have them be distinct.
         val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        //kryo.classLoader = cl2
-        //kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
         val context3 = P2P_CONTEXT.withClassLoader(cl2).withWhitelisted(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
 
         val state3 = bytes.deserialize(context = context3)

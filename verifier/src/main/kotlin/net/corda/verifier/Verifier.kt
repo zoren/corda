@@ -5,7 +5,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.internal.div
-import net.corda.core.serialization.KryoHeaderV0_1
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.Singletons
 import net.corda.core.utilities.ByteSequence
@@ -21,6 +20,7 @@ import net.corda.nodeapi.config.getValue
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.serialization.AbstractKryoSerializationScheme
 import net.corda.nodeapi.serialization.KRYO_P2P_CONTEXT
+import net.corda.nodeapi.serialization.KryoHeaderV0_1
 import net.corda.nodeapi.serialization.SerializationFactoryImpl
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
