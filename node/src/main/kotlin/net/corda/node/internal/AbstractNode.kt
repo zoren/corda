@@ -209,6 +209,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
 
             runOnStop += network::stop
+            // If we succesfuly loaded network data from database, we set this future to Unit.
             _networkMapRegistrationFuture.captureLater(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
@@ -488,7 +489,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
-        val allIdentitiesSet = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet() // TODO Add legalIdentity (after services removal).
+        val allIdentitiesSet = advertisedServiceEntries.map { it.identity }.toSet() // TODO Add node's legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         return NodeInfo(addresses, legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
     }
@@ -588,10 +589,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val netMapRegistration = registerWithNetworkMap()
             // We may want to start node immediately with database data and not wait for network map registration (but send it either way).
             // So we are ready to go.
-            // TODO we may want to wait some time for registration, and then just set it?
-            if (services.networkMapCache.loadDBSuccess)
+            if (services.networkMapCache.loadDBSuccess) {
+                log.info("Node successfully loaded node info data from the database, completing networkMapRegistration future.")
                 Futures.immediateFuture(Unit)
-            else netMapRegistration
+            } else netMapRegistration
         }
     }
 
@@ -781,7 +782,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService = MonitoringService(MetricRegistry())
         override val validatedTransactions = makeTransactionStorage()
         override val transactionVerifierService by lazy { makeTransactionVerifierService() }
-        override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
+        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val networkMapCache by lazy { makeNetworkMapCache() }
         override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties, configuration.database) }
         override val vaultQueryService by lazy {
             HibernateVaultQueryImpl(HibernateConfiguration(schemaService, configuration.database ?: Properties(), { identityService }), vaultService)
@@ -803,7 +805,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
-        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
 
