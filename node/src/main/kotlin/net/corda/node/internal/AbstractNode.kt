@@ -31,6 +31,7 @@ import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.services.TransactionKeyHandler
+import net.corda.node.services.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
