@@ -31,7 +31,7 @@ import java.util.*
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
                                      participants: List<AbstractParty> = emptyList(),
                                      notary: Party = DUMMY_NOTARY) : Vault<DealState> {
-    val myKey: PublicKey = myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = legalIdentityKey
     val me = AnonymousParty(myKey)
 
     val transactions: List<SignedTransaction> = dealIds.map {
@@ -61,7 +61,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                                             linearNumber: Long = 0L,
                                             linearBoolean: Boolean = false,
                                             linearTimestamp: Instant = now()) : Vault<LinearState> {
-    val myKey: PublicKey = myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = legalIdentityKey
     val me = AnonymousParty(myKey)
     val issuerKey = DUMMY_NOTARY_KEY
     val signatureMetadata = SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
@@ -113,7 +113,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey: PublicKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = ownedBy?.owningKey ?: legalIdentityKey
     val me = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.
@@ -148,7 +148,7 @@ fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
                                          ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                          ownedBy: AbstractParty? = null,
                                          issuedBy: PartyAndReference = DUMMY_OBLIGATION_ISSUER.ref(1)): Vault<CommodityContract.State> {
-    val myKey: PublicKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = ownedBy?.owningKey ?: legalIdentityKey
     val me = AnonymousParty(myKey)
 
     val commodity = CommodityContract()

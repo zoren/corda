@@ -3,6 +3,7 @@ package net.corda.node.services
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -62,6 +63,8 @@ open class MockServiceHubInternal(
         get() = scheduler ?: throw UnsupportedOperationException()
     override val clock: Clock
         get() = overrideClock ?: throw UnsupportedOperationException()
+    override val legalIdentity: PartyAndCertificate
+        get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo
         get() = NodeInfo(listOf(MOCK_HOST_AND_PORT), DUMMY_IDENTITY_1, NonEmptySet.of(DUMMY_IDENTITY_1), 1) // Required to get a dummy platformVersion when required for tests.
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())

@@ -37,7 +37,8 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
     private val client = CordaRPCClient(localTunnelAddress)
     private var rpcConnection: CordaRPCConnection? = null
     val proxy: CordaRPCOps get() = rpcConnection?.proxy ?: throw IllegalStateException("proxy requested, but the client is not running")
-    val info: NodeInfo by lazy { proxy.nodeIdentity() }
+    val info: NodeInfo by lazy { proxy.nodeInfo() } // TODO used only when queried for advertised services
+    val mainIdentity: Party by lazy { proxy.nodeMainIdentity() }
 
     fun <A> doWhileClientStopped(action: () -> A): A {
         val connection = rpcConnection

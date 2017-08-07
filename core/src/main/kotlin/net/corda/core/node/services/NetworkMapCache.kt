@@ -57,6 +57,13 @@ interface NetworkMapCache {
         return partyNodes.filter { it.advertisedServices.any { it.info.type.isSubTypeOf(serviceType) } }
     }
 
+    fun getPeersWithService(serviceType: ServiceType): List<ServiceEntry> {
+        return partyNodes.fold(ArrayList<ServiceEntry>()) {
+            acc, elem -> acc.addAll(elem.advertisedServices.filter { it.info.type.isSubTypeOf(serviceType)})
+            acc
+        }
+    }
+
     /**
      * Get a recommended node that advertises a service, and is suitable for the specified contract and parties.
      * Implementations might understand, for example, the correct regulator to use for specific contracts/parties,
@@ -76,7 +83,12 @@ interface NetworkMapCache {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
+    // TODO Change API can return many nodes.
+    fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { principal in it.legalIdentitiesAndCerts.map { it.name }}
+
+    fun getPeerByLegalName(principal: X500Name): Party? = getNodeByLegalName(principal)?.let {
+        it.legalIdentitiesAndCerts.singleOrNull { it.name == principal }?.party
+    }
 
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of

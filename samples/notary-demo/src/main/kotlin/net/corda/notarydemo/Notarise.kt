@@ -6,6 +6,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.toStringShort
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
@@ -32,10 +33,13 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
-    private val counterpartyNode by lazy {
+    private val counterparty by lazy {
         val parties = rpc.networkMapSnapshot()
-        parties.single { it.legalIdentity.name == BOB.name }
-    }
+        parties.fold(ArrayList<PartyAndCertificate>()) { acc, elem ->
+            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB.name})
+            acc
+        }.single().party
+    } //TODO check notarise works
 
     /** Makes calls to the node rpc to start transaction notarisation. */
     fun notarise(count: Int) {
@@ -54,7 +58,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
         return (1..count).map {
-            rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity, it).returnValue
+            rpc.startFlow(::DummyIssueAndMove, notary, counterparty, it).returnValue
         }.transpose().getOrThrow()
     }
 

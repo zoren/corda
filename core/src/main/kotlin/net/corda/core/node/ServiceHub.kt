@@ -112,6 +112,9 @@ interface ServiceHub : ServicesForResolution {
         }
     }
 
+    /** Node's primary identity */
+    val legalIdentity: PartyAndCertificate
+
     /**
      * Helper property to shorten code for fetching the the [PublicKey] portion of the
      * Node's primary signing identity.
@@ -121,7 +124,7 @@ interface ServiceHub : ServicesForResolution {
      * If the key is actually a CompositeKey, the first leaf key hosted on this node
      * will be used to create the signature.
      */
-    val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentity.owningKey
+    val legalIdentityKey: PublicKey get() = legalIdentity.owningKey
 
     /**
      * Helper property to shorten code for fetching the the [PublicKey] portion of the
