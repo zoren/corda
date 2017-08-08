@@ -143,6 +143,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         private val logger = loggerFor<AbstractNetworkMapService>()
     }
 
+    // TODO it will be problematic, we loose index
     protected abstract val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.

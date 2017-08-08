@@ -34,6 +34,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
 
 /**
  * Extremely simple in-memory cache of the network map.
@@ -48,7 +49,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }
 
-    override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
+    override val partyNodes: MutableList<NodeInfo> = ArrayList()
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
@@ -59,14 +60,13 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
 
     private var registeredForPush = false
-    protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val node = registeredNodes[party.owningKey]
+        val node = getNodeByLegalIdentityKey(party.owningKey)
         if (node != null) {
             return PartyInfo.Node(node)
         }
-        for ((_, value) in registeredNodes) {
+        for (value in partyNodes) {
             for (service in value.advertisedServices) {
                 if (service.identity.party == party) {
                     return PartyInfo.Service(service)
@@ -76,7 +76,11 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         return null
     }
 
-    override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
+    // TODO Should return List<NodeInfo>
+    override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = partyNodes.singleOrNull {
+        identityKey in it.legalIdentitiesAndCerts.map { it.owningKey }
+    }
+
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = if (serviceHub != null) {
             serviceHub.identityService.partyFromAnonymous(party)
@@ -129,18 +133,21 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
 
     override fun addNode(node: NodeInfo) {
         synchronized(_changed) {
-            val previousNode = registeredNodes.put(node.legalIdentityAndCert2.owningKey, node)
-            if (previousNode == null) {
+            // TODO It is bad solution complexity wise, we lost good index for NodeInfos.
+            val previousIndex = partyNodes.indexOfFirst { it.legalIdentitiesAndCerts == node.legalIdentitiesAndCerts }
+            if (previousIndex == -1) {
+                partyNodes.add(node)
                 changePublisher.onNext(MapChange.Added(node))
-            } else if (previousNode != node) {
-                changePublisher.onNext(MapChange.Modified(node, previousNode))
+            } else if (partyNodes[previousIndex] != node) {
+                partyNodes[previousIndex] = node
+                changePublisher.onNext(MapChange.Modified(node, partyNodes[previousIndex]))
             }
         }
     }
 
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
-            registeredNodes.remove(node.legalIdentityAndCert2.owningKey)
+            partyNodes.removeIf { it.legalIdentitiesAndCerts == node.legalIdentitiesAndCerts }
             changePublisher.onNext(MapChange.Removed(node))
         }
     }
