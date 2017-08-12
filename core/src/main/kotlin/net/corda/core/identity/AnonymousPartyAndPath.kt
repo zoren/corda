@@ -17,6 +17,7 @@ import java.security.cert.X509Certificate
  * party's key rather than name, which is the appropriate test for confidential parties but not for well known identities.
  */
 @CordaSerializable
+@Deprecated("The party is not anonymous as its well-known identity can be trivially extracted from the certPath")
 data class AnonymousPartyAndPath(
         val party: AnonymousParty,
         val certPath: CertPath) {

@@ -67,6 +67,7 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -88,6 +89,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -721,11 +725,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val (cert, keyPair) = keyStore.certificateAndKeyPair(privateKeyAlias)
 
         // Get keys from keystore.
-        val loadedServiceName = cert.subject
-        if (loadedServiceName != serviceName)
-            throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:$serviceName vs $loadedServiceName")
+        if (cert.subject != serviceName)
+            throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore: $serviceName vs ${cert.subject}")
 
-        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).toList())
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(keyStore.getCertificateChain(privateKeyAlias).asList())
         // Use composite key instead if exists
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
         val publicKey = if (keyStore.containsAlias(compositeKeyAlias)) {
@@ -734,8 +737,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             keyPair.public
         }
 
+        require(cert == X509CertificateHolder(certPath.certificates[0].encoded)) { "Certificates in key store do not line up" }
+
         partyKeys += keyPair
-        return Pair(PartyAndCertificate(loadedServiceName, publicKey, cert, certPath), keyPair)
+        return Pair(PartyAndCertificate(publicKey, certPath), keyPair)
     }
 
     private fun migrateKeysFromFile(keyStore: KeyStoreWrapper, serviceName: X500Name,
@@ -752,13 +757,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             keyStore.savePublicKey(serviceName, compositeKeyAlias, Crypto.decodePublicKey(compositeKeyFile.readAll()))
         }
         log.info("Finish migrating $privateKeyAlias from file to keystore.")
-    }
-
-    private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
-        val certFactory = CertificateFactory.getInstance("X509")
-        val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-        val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
-        return PartyAndCertificate(party, certHolder, certPath)
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()

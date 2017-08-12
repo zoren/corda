@@ -115,12 +115,12 @@ class InMemoryIdentityServiceTests {
         service.verifyAndRegisterAnonymousIdentity(aliceTxIdentity, alice.party)
 
         var actual = service.anonymousFromKey(aliceTxIdentity.party.owningKey)
-        assertEquals<AnonymousPartyAndPath>(aliceTxIdentity, actual!!)
+        assertEquals(aliceTxIdentity, actual!!)
 
         assertNull(service.anonymousFromKey(bobTxIdentity.party.owningKey))
         service.verifyAndRegisterAnonymousIdentity(bobTxIdentity, bob.party)
         actual = service.anonymousFromKey(bobTxIdentity.party.owningKey)
-        assertEquals<AnonymousPartyAndPath>(bobTxIdentity, actual!!)
+        assertEquals(bobTxIdentity, actual!!)
     }
 
     /**
@@ -140,7 +140,7 @@ class InMemoryIdentityServiceTests {
             val bobTxKey = Crypto.generateKeyPair()
             val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
             val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
-            val bob = PartyAndCertificate(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
+            val bob = PartyAndCertificate(bobRootKey.public, bobCertPath)
 
             // Now we have identities, construct the service and let it know about both
             val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)

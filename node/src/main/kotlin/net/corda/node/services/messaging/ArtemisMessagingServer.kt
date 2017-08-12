@@ -25,7 +25,6 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
 import net.corda.node.utilities.X509Utilities
 import net.corda.node.utilities.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.node.utilities.X509Utilities.CORDA_ROOT_CA
-import net.corda.node.utilities.getX509Certificate
 import net.corda.node.utilities.loadKeyStore
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -273,12 +272,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = loadKeyStore(config.trustStoreFile, config.trustStorePassword)
-        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
-        // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourCertificate.subject == config.myLegalName) {
-            "Legal name does not match with our subject CN: ${ourCertificate.subject}"
-        }
         val defaultCertPolicies = mapOf(
                 PEER_ROLE to CertificateChainCheckPolicy.RootMustMatch,
                 NODE_ROLE to CertificateChainCheckPolicy.LeafMustMatch,

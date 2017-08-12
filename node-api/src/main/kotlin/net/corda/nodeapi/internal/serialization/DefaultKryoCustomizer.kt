@@ -12,6 +12,7 @@ import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -40,6 +41,7 @@ import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
+import java.security.PublicKey
 import java.security.cert.CertPath
 import java.util.*
 import kotlin.collections.ArrayList
@@ -71,6 +73,7 @@ object DefaultKryoCustomizer {
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
+            register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 
             UnmodifiableCollectionsSerializer.registerSerializers(this)
             ImmutableListSerializer.registerSerializers(this)
@@ -139,6 +142,18 @@ object DefaultKryoCustomizer {
             // However this doesn't work for non-public classes in the java. namespace
             val strat = if (type.name.startsWith("java.") && !isPublic(type.modifiers)) fallbackStrategy else defaultStrategy
             return strat.newInstantiatorOf(type)
+        }
+    }
+
+    private object PartyAndCertificateSerializer : Serializer<PartyAndCertificate>() {
+        override fun write(kryo: Kryo, output: Output, obj: PartyAndCertificate) {
+            kryo.writeClassAndObject(output, obj.owningKey)
+            kryo.writeClassAndObject(output, obj.certPath)
+        }
+        override fun read(kryo: Kryo, input: Input, type: Class<PartyAndCertificate>): PartyAndCertificate {
+            return PartyAndCertificate(
+                    kryo.readClassAndObject(input) as PublicKey,
+                    kryo.readClassAndObject(input) as CertPath)
         }
     }
 

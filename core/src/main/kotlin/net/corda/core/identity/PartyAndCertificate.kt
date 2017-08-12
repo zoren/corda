@@ -1,6 +1,8 @@
 package net.corda.core.identity
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.toStringShort
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
@@ -11,30 +13,29 @@ import java.security.cert.CertPath
  * [PartyAndCertificate] instances is based on the party only, as certificate and path are data associated with the party,
  * not part of the identifier themselves.
  */
-@CordaSerializable
-data class PartyAndCertificate(val party: Party,
-                               val certificate: X509CertificateHolder,
-                               val certPath: CertPath) {
-    constructor(name: X500Name, owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath) : this(Party(name, owningKey), certificate, certPath)
-    val name: X500Name
-        get() = party.name
-    val owningKey: PublicKey
-        get() = party.owningKey
+class PartyAndCertificate(val owningKey: PublicKey, val certPath: CertPath) {
+    @Transient val certificate: X509CertificateHolder = X509CertificateHolder(certPath.certificates[0].encoded)
+    @Transient val party: Party = Party(certificate.subject, owningKey)
 
-    override fun equals(other: Any?): Boolean {
-        return if (other is PartyAndCertificate)
-            party == other.party
-        else
-            false
+    init {
+        val certPubKey = Crypto.toSupportedPublicKey(certificate.subjectPublicKeyInfo)
+        if (owningKey is CompositeKey) {
+            require(certPubKey in owningKey.leafKeys) {
+                "Certificate key must be one of the keys contained within composite identity key"
+            }
+        } else {
+            require(owningKey == certPubKey) {
+                "Certificate path validation must end at owning key ${owningKey.toStringShort()}, found ${certPubKey.toStringShort()}"
+            }
+        }
     }
 
+    val name: X500Name get() = party.name
+
+    operator fun component1(): Party = party
+    operator fun component2(): X509CertificateHolder = certificate
+
+    override fun equals(other: Any?): Boolean = other === this || other is PartyAndCertificate && other.party == party
     override fun hashCode(): Int = party.hashCode()
-    /**
-     * Convert this party and certificate into an anomymised identity. This exists primarily for example cases which
-     * want to use well known identities as if they're anonymous identities.
-     */
-    fun toAnonymisedIdentity(): AnonymousPartyAndPath {
-        return AnonymousPartyAndPath(party.owningKey, certPath)
-    }
     override fun toString(): String = party.toString()
 }
