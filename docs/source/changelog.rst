@@ -45,6 +45,11 @@ UNRELEASED
 * Remove `IssuerFlow` as it allowed nodes to request arbitrary amounts of cash to be issued from any remote node. Use
   `CashIssueFlow` instead.
 
+* ``:finance`` module now acting as a CorDapp with regard to flow registration, schemas and serializable types.
+
+* ``WebServerPluginRegistry`` now has a ``customizeJSONSerialization`` which can be overridden to extend the REST JSON
+  serializers. In particular the IRS demos must now register the ``BusinessCalendar`` serializers.
+
 Milestone 14
 ------------
 

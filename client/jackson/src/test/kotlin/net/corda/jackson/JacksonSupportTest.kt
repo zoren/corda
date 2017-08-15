@@ -2,13 +2,13 @@ package net.corda.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.parseCurrency
 import net.corda.finance.USD
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.transactions.SignedTransaction
-import net.corda.finance.parseCurrency
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
