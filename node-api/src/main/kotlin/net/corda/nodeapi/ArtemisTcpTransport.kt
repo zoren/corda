@@ -12,7 +12,7 @@ import java.nio.file.Path
 sealed class ConnectionDirection {
     data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
     data class Outbound(
-            val expectedCommonNames: Set<X500Name> = emptySet(), // TODO SNI? It's not nice solution now
+            val expectedCommonNames: Set<X500Name> = emptySet(), // TODO SNI? Or we need a notion of node's network identity?
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()
 }

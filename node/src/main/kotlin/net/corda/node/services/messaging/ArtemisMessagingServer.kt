@@ -494,13 +494,14 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                         .session
                 // Checks the peer name is the one we are expecting.
                 val peerLegalName = session.peerPrincipal.name.let(::X500Name)
-                require(peerLegalName in expectedLegalNames) {
+                val expectedLegalName = expectedLegalNames.singleOrNull { it == peerLegalName }
+                require(expectedLegalName != null) {
                     "Peer has wrong CN - expected $expectedLegalNames but got $peerLegalName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 // Make sure certificate has the same name.
                 val peerCertificate = X509CertificateHolder(session.peerCertificateChain.first().encoded)
-                require(peerCertificate.subject in expectedLegalNames) {
+                require(peerCertificate.subject == expectedLegalName) {
                     "Peer has wrong subject name in the certificate - expected $expectedLegalNames but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
