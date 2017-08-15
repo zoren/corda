@@ -45,13 +45,13 @@ class InMemoryNetworkMapCacheTest {
         mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.services.legalIdentityKey), nodeA.info)
+        assertEquals(nodeA.services.networkMapCache.getNodesByLegalIdentityKey(nodeA.services.legalIdentityKey).singleOrNull(), nodeA.info)
 
         nodeA.database.transaction {
             nodeA.services.networkMapCache.addNode(nodeB.info)
         }
         // The details of node B write over those for node A
-        assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.services.legalIdentityKey), nodeB.info)
+        assertEquals(nodeA.services.networkMapCache.getNodesByLegalIdentityKey(nodeA.services.legalIdentityKey).singleOrNull(), nodeB.info)
     }
 
     @Test

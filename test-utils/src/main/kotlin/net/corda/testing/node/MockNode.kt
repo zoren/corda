@@ -388,8 +388,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.network.myAddress == msgRecipient }
             is InMemoryMessagingNetwork.ServiceHandle -> {
-                nodes.filter { it.advertisedServices.any { it == msgRecipient.service.info } }.firstOrNull()
-                        ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
+                nodes.filter { it.advertisedServices.any { it.name == msgRecipient.party.name } }.firstOrNull()
+                        ?: throw IllegalArgumentException("Couldn't find node advertising service with owning party name: ${msgRecipient.party.name} ")
             }
             else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")
         }

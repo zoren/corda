@@ -86,7 +86,6 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
 
         // We don't create a network map, so manually handle registrations
-        val nodes = listOf(node1, node2, notary1, notary2)
         mockNet.registerIdentities()
     }
 
@@ -338,7 +337,7 @@ class FlowFrameworkTests {
         }
         val endpoint = mockNet.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
         val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
-        assertTrue(party1Info is PartyInfo.Service)
+        assertTrue(party1Info is PartyInfo.DistributedNode)
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
         assertThat(notary1Address).isInstanceOf(InMemoryMessagingNetwork.ServiceHandle::class.java)
         assertEquals(notary1Address, endpoint.getAddressOfParty(notary2.services.networkMapCache.getPartyInfo(notary2.info.notaryIdentity)!!))
@@ -761,7 +760,7 @@ class FlowFrameworkTests {
 
     private fun MockNode.sendSessionMessage(message: SessionMessage, destination: MockNode) {
         services.networkService.apply {
-            val address = getAddressOfParty(PartyInfo.Node(destination.info))
+            val address = getAddressOfParty(PartyInfo.SingleNode(destination.services.legalIdentity.party, emptyList()))
             send(createMessage(StateMachineManager.sessionTopic, message.serialize().bytes), address)
         }
     }

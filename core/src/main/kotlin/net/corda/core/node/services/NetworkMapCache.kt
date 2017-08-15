@@ -83,7 +83,6 @@ interface NetworkMapCache {
     fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
-    // TODO Change API can return many nodes.
     fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { principal in it.legalIdentitiesAndCerts.map { it.name }}
 
     fun getPeerByLegalName(principal: X500Name): Party? = getNodeByLegalName(principal)?.let {
@@ -95,9 +94,8 @@ interface NetworkMapCache {
      * the services it provides. In case of a distributed service – run by multiple nodes – each participant advertises
      * the identity of the *whole group*.
      */
-
-    /** Look up the node info for a specific peer key. */
-    fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo?
+    /** Look up the node infos for a specific peer key. */
+    fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo>
 
     /** Look up all nodes advertising the service owned by [publicKey] */
     fun getNodesByAdvertisedServiceIdentityKey(publicKey: PublicKey): List<NodeInfo> {

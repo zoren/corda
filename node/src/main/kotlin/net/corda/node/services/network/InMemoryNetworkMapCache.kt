@@ -32,7 +32,6 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
-import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 
@@ -62,22 +61,16 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     private var registeredForPush = false
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val node = getNodeByLegalIdentityKey(party.owningKey)
-        if (node != null) {
-            return PartyInfo.Node(node)
+        val nodes = getNodesByLegalIdentityKey(party.owningKey)
+        return if (nodes.size == 1) {
+            PartyInfo.SingleNode(party, nodes[0].addresses)
         }
-        for (value in partyNodes) {
-            for (service in value.advertisedServices) {
-                if (service.identity.party == party) {
-                    return PartyInfo.Service(service)
-                }
-            }
-        }
-        return null
+        else if (nodes.size > 1) {
+            PartyInfo.DistributedNode(party)
+        } else null
     }
 
-    // TODO Should return List<NodeInfo>
-    override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = partyNodes.singleOrNull {
+    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = partyNodes.filter {
         identityKey in it.legalIdentitiesAndCerts.map { it.owningKey }
     }
 
@@ -89,7 +82,7 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
         }
 
         return wellKnownParty?.let {
-            getNodeByLegalIdentityKey(it.owningKey)
+            getNodesByLegalIdentityKey(it.owningKey).singleOrNull()
         }
     }
 
@@ -156,11 +149,11 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
      * Unsubscribes from updates from the given map service.
      * @param service the network map service to listen to updates from.
      */
-    override fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit> {
+    override fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit> {
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
         // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
-        val address = network.getAddressOfParty(PartyInfo.Node(service))
+        val address = getPartyInfo(mapParty)?.let{ network.getAddressOfParty(it) } ?: throw IllegalArgumentException("Can't deregister for updates, don't know the party: $mapParty")
         val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }

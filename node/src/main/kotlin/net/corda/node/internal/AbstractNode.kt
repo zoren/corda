@@ -603,7 +603,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             "Initial network map address must indicate a node that provides a network map service"
         }
         val address: SingleMessageRecipient = networkMapAddress ?:
-                network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
+                network.getAddressOfParty(PartyInfo.SingleNode(services.legalIdentity.party, info.addresses)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }

@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
@@ -34,9 +35,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
     /**
      * Deregister from updates from the given map service.
      * @param network the network messaging service.
-     * @param service the network map service to fetch current state from.
+     * @param mapParty the network map service party to fetch current state from.
      */
-    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit>
+    fun deregisterForUpdates(network: MessagingService, mapParty: Party): CordaFuture<Unit>
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further

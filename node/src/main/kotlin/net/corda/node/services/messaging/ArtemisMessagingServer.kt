@@ -133,7 +133,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         if (!running) {
             configureAndStartServer()
             // Deploy bridge to the network map service
-            config.networkMapService?.let { deployBridge(NetworkMapAddress(it.address), it.legalName) }
+            config.networkMapService?.let { deployBridge(NetworkMapAddress(it.address), setOf(it.legalName)) }
             networkChangeHandle = networkMapCache.changed.subscribe { updateBridgesOnNetworkChange(it) }
             running = true
         }
@@ -302,35 +302,23 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     private fun deployBridgesFromNewQueue(queueName: String) {
         log.debug { "Queue created: $queueName, deploying bridge(s)" }
-
         fun deployBridgeToPeer(nodeInfo: NodeInfo) {
             log.debug("Deploying bridge for $queueName to $nodeInfo")
-            val address = nodeInfo.addresses.first() // TODO Load balancing.
-            deployBridge(queueName, address, nodeInfo.legalIdentityAndCert2.name)
+            val address = nodeInfo.addresses.first()
+            deployBridge(queueName, address, nodeInfo.legalIdentitiesAndCerts.map { it.name }.toSet())
         }
 
-        when {
-            queueName.startsWith(PEERS_PREFIX) -> try {
+        if (queueName.startsWith(PEERS_PREFIX)) {
+            try {
                 val identity = parsePublicKeyBase58(queueName.substring(PEERS_PREFIX.length))
-                val nodeInfo = networkMapCache.getNodeByLegalIdentityKey(identity)
-                if (nodeInfo != null) {
-                    deployBridgeToPeer(nodeInfo)
+                val nodeInfos = networkMapCache.getNodesByLegalIdentityKey(identity)
+                if (nodeInfos.isNotEmpty()) {
+                    nodeInfos.forEach { deployBridgeToPeer(it) }
                 } else {
                     log.error("Queue created for a peer that we don't know from the network map: $queueName")
                 }
             } catch (e: AddressFormatException) {
                 log.error("Flow violation: Could not parse peer queue name as Base 58: $queueName")
-            }
-
-            queueName.startsWith(SERVICES_PREFIX) -> try {
-                val identity = parsePublicKeyBase58(queueName.substring(SERVICES_PREFIX.length))
-                val nodeInfos = networkMapCache.getNodesByAdvertisedServiceIdentityKey(identity)
-                // Create a bridge for each node advertising the service.
-                for (nodeInfo in nodeInfos) {
-                    deployBridgeToPeer(nodeInfo)
-                }
-            } catch (e: AddressFormatException) {
-                log.error("Flow violation: Could not parse service queue name as Base 58: $queueName")
             }
         }
     }
@@ -345,16 +333,14 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      */
     private fun updateBridgesOnNetworkChange(change: MapChange) {
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
-            val peerAddress = getArtemisPeerAddress(node)
-            val addresses = mutableListOf(peerAddress)
-            node.advertisedServices.mapTo(addresses) { NodeAddress.asService(it.identity.owningKey, peerAddress.hostAndPort) }
-            return addresses.asSequence()
+            val address = node.addresses.first() // TODO Load balancing
+            return node.legalIdentitiesAndCerts.map { getArtemisPeerAddress(it.party, address, config.networkMapService?.legalName) }.asSequence()
         }
 
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
                     .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
-                    .forEach { deployBridge(it, node.legalIdentityAndCert2.name) }
+                    .forEach { deployBridge(it, node.legalIdentitiesAndCerts.map { it.name }.toSet()) }
         }
 
         fun destroyBridges(node: NodeInfo) {
@@ -378,8 +364,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         }
     }
 
-    private fun deployBridge(address: ArtemisPeerAddress, legalName: X500Name) {
-        deployBridge(address.queueName, address.hostAndPort, legalName)
+    private fun deployBridge(address: ArtemisPeerAddress, legalNames: Set<X500Name>) {
+        deployBridge(address.queueName, address.hostAndPort, legalNames)
     }
 
     private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
@@ -391,10 +377,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
      */
-    private fun deployBridge(queueName: String, target: NetworkHostAndPort, legalName: X500Name) {
+    private fun deployBridge(queueName: String, target: NetworkHostAndPort, legalNames: Set<X500Name>) {
         val connectionDirection = ConnectionDirection.Outbound(
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
-                expectedCommonName = legalName
+                expectedCommonNames = legalNames
         )
         val tcpTransport = createTcpTransport(connectionDirection, target.host, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
@@ -430,9 +416,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(expectedLegalName: X500Name, errorMsg: String?) {
+    internal fun hostVerificationFail(expectedLegalNames: Set<X500Name>, errorMsg: String?) {
         log.error(errorMsg)
-        if (expectedLegalName == config.networkMapService?.legalName) {
+        if (config.networkMapService?.legalName in expectedLegalNames) {
             // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
             _networkMapConnectionFuture!!.setException(IOException("${config.networkMapService} failed host verification check"))
         }
@@ -498,7 +484,8 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as? NettyConnection
         if (sslEnabled && connection != null) {
-            val expectedLegalName = configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] as X500Name
+            @Suppress("UNCHECKED_CAST")
+            val expectedLegalNames = (configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] ?: emptySet<X500Name>()) as Set<X500Name>
             try {
                 val session = connection.channel
                         .pipeline()
@@ -507,21 +494,21 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                         .session
                 // Checks the peer name is the one we are expecting.
                 val peerLegalName = session.peerPrincipal.name.let(::X500Name)
-                require(peerLegalName == expectedLegalName) {
-                    "Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
+                require(peerLegalName in expectedLegalNames) {
+                    "Peer has wrong CN - expected $expectedLegalNames but got $peerLegalName. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 // Make sure certificate has the same name.
                 val peerCertificate = X509CertificateHolder(session.peerCertificateChain.first().encoded)
-                require(peerCertificate.subject == expectedLegalName) {
-                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
+                require(peerCertificate.subject in expectedLegalNames) {
+                    "Peer has wrong subject name in the certificate - expected $expectedLegalNames but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
                 X509Utilities.validateCertificateChain(X509CertificateHolder(session.localCertificates.last().encoded), *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()
-                server.hostVerificationFail(expectedLegalName, e.message)
+                server.hostVerificationFail(expectedLegalNames, e.message)
                 return null
             }
         }
