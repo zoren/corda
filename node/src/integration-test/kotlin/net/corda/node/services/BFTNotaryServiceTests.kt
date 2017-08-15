@@ -30,6 +30,7 @@ import org.junit.Test
 import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class BFTNotaryServiceTests {
     companion object {
@@ -91,44 +92,55 @@ class BFTNotaryServiceTests {
     private fun detectDoubleSpend(faultyReplicas: Int) {
         val clusterSize = minClusterSize(faultyReplicas)
         val notary = bftNotaryCluster(clusterSize)
-        node.run {
-            val issueTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
+            val issueTx = node.signInitialTransaction(notary) {
+            addOutputState(DummyContract.SingleOwnerState(owner = node.info.legalIdentity))
+        }
+        node.database.transaction {
+            node.services.recordTransactions(issueTx)
+        }
+        val spendTxs = (1..10).map {
+            node.signInitialTransaction(notary, true) {
+                addInputState(issueTx.tx.outRef<ContractState>(0))
             }
-            database.transaction {
-                services.recordTransactions(issueTx)
-            }
-            val spendTxs = (1..10).map {
-                signInitialTransaction(notary, true) {
-                    addInputState(issueTx.tx.outRef<ContractState>(0))
-                }
-            }
-            assertEquals(spendTxs.size, spendTxs.map { it.id }.distinct().size)
-            val flows = spendTxs.map { NotaryFlow.Client(it) }
-            val stateMachines = flows.map { services.startFlow(it) }
-            mockNet.runNetwork()
-            val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
-            val successfulIndex = results.mapIndexedNotNull { index, result ->
-                if (result is Try.Success) {
+        }
+        assertEquals(spendTxs.size, spendTxs.map { it.id }.distinct().size)
+        val flows = spendTxs.map { NotaryFlow.Client(it) }
+        val stateMachines = flows.map { node.services.startFlow(it) }
+        mockNet.runNetwork()
+        val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
+        val successfulIndex = results.mapIndexedNotNull { index, result ->
+            when (result) {
+                is Try.Success -> {
                     val signers = result.value.map { it.by }
                     assertEquals(minCorrectReplicas(clusterSize), signers.size)
                     signers.forEach {
                         assertTrue(it in (notary.owningKey as CompositeKey).leafKeys)
                     }
                     index
-                } else {
+                }
+                is Try.Failure -> {
                     null
                 }
-            }.single()
-            spendTxs.zip(results).forEach { (tx, result) ->
-                if (result is Try.Failure) {
+                else -> {
+                    fail("Unexpected result $result")
+                }
+            }
+        }.single()
+        spendTxs.zip(results).forEach { (tx, result) ->
+            when (result) {
+                is Try.Failure -> {
                     val error = (result.exception as NotaryException).error as NotaryError.Conflict
                     assertEquals(tx.id, error.txId)
                     val (stateRef, consumingTx) = error.conflict.verified().stateHistory.entries.single()
                     assertEquals(StateRef(issueTx.id, 0), stateRef)
                     assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
                     assertEquals(0, consumingTx.inputIndex)
-                    assertEquals(info.legalIdentity, consumingTx.requestingParty)
+                    assertEquals(node.info.legalIdentity, consumingTx.requestingParty)
+                }
+                is Try.Success -> { // Fine
+                }
+                else -> {
+                    fail("Unexpected result $result")
                 }
             }
         }
