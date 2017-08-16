@@ -5,17 +5,18 @@ apply plugin: 'kotlin-jpa'
 apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'
 
 dependencies {
-    compile project(':core')
-    compile project(':node-schemas')
+    cordaCompile project(':core')
+    cordaCompile project(':node-schemas')
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
     // Used for adding BusinessCalendar web support
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
+    //compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

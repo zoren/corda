@@ -165,6 +165,10 @@ class Node extends CordformNode {
     private void installCordapps() {
         def pluginsDir = new File(nodeDir, "plugins")
         def cordapps = getCordappList()
+        println ("FOUND CORDAPPS")
+        cordapps.each {
+            println it
+        }
         project.copy {
             from cordapps
             into pluginsDir
@@ -235,8 +239,25 @@ class Node extends CordformNode {
      * @return List of this node's cordapps.
      */
     private Collection<File> getCordappList() {
+        println("CORDAPPS")
+        cordapps.each {
+            println it
+        }
+
+        println("FILTER")
         return project.configurations.cordapp.files {
-            cordapps.contains(it.group + ":" + it.name + ":" + it.version)
+            for(def cordapp in cordapps) {
+                println(cordapp.class.name)
+                println((it.group + ":" + it.name + ":" + it.version).class.name)
+                if(cordapp.toString().equals(it.group + ":" + it.name + ":" + it.version)) {
+                    println("YES!")
+                } else {
+                    println("NO?")
+                }
+            }
+            println(it.group + ":" + it.name + ":" + it.version)
+            println(cordapps.contains(it.group + ":" + it.name + ":" + it.version))
+            true
         }
     }
 }
