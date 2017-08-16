@@ -61,6 +61,11 @@ interface CordaRPCOps : RPCOps {
     override val protocolVersion: Int get() = nodeIdentity().platformVersion
 
     /**
+     * Returns a list of currently in-progress state machine infos.
+     */
+    fun stateMachinesSnapshot(): List<StateMachineInfo>
+
+    /**
      * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables
@@ -152,10 +157,20 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
+     * Returns a list of all recorded transactions.
+     */
+    fun verifiedTransactionsSnapshot(): List<SignedTransaction>
+
+    /**
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
     fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
+
+    /**
+     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings.
+     */
+    fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping>
 
     /**
      * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
@@ -163,6 +178,11 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
+
+    /**
+     * Returns all parties currently visible on the network with their advertised services.
+     */
+    fun networkMapSnapshot(): List<NodeInfo>
 
     /**
      * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
@@ -400,6 +420,29 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrac
         arg2: C,
         arg3: D
 ): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D, E, F) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
  * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.

@@ -2,11 +2,11 @@ package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
-import net.corda.core.concurrent.CordaFuture
 import net.corda.contracts.asset.CASH
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
 import net.corda.contracts.asset.`owned by`
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -15,7 +15,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.AnonymousPartyAndPath
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.map
@@ -34,6 +33,8 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
+import net.corda.finance.DOLLARS
+import net.corda.finance.`issued by`
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
@@ -201,8 +202,8 @@ class TwoPartyTradeFlowTests {
             val cashIssuer = bankNode.info.legalIdentity.ref(1)
             val cpIssuer = bankNode.info.legalIdentity.ref(1, 2, 3)
 
-            aliceNode.services.identityService.registerIdentity(bobNode.info.legalIdentityAndCert)
-            bobNode.services.identityService.registerIdentity(aliceNode.info.legalIdentityAndCert)
+            aliceNode.services.identityService.verifyAndRegisterIdentity(bobNode.info.legalIdentityAndCert)
+            bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
@@ -521,7 +522,7 @@ class TwoPartyTradeFlowTests {
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
         val anonymousSeller = sellerNode.services.let { serviceHub ->
             serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, false)
-        }
+        }.party.anonymise()
         val buyerFlows: Observable<BuyerAcceptor> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS, anonymousSeller)
@@ -534,7 +535,7 @@ class TwoPartyTradeFlowTests {
                           val notary: NodeInfo,
                           val assetToSell: StateAndRef<OwnableState>,
                           val price: Amount<Currency>,
-                          val me: AnonymousPartyAndPath) : FlowLogic<SignedTransaction>() {
+                          val me: AnonymousParty) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
@@ -543,7 +544,7 @@ class TwoPartyTradeFlowTests {
                     notary,
                     assetToSell,
                     price,
-                    me.party))
+                    me))
         }
     }
 

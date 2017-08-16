@@ -4,7 +4,9 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.contracts.getCashBalance
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryService
@@ -13,9 +15,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.database.HibernateConfiguration
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.NodeSchemaService
+import net.corda.finance.*
 import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.*
 import net.corda.testing.contracts.*
@@ -222,6 +222,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             val dummyIssueBuilder = TransactionBuilder(notary = DUMMY_NOTARY).apply {
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+                addCommand(dummyCommand(notaryServices.legalIdentityKey))
             }
             val dummyIssue = notaryServices.signInitialTransaction(dummyIssueBuilder)
 
@@ -241,7 +242,8 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             // Issue a linear state
             val dummyIssueBuilder = TransactionBuilder(notary = DUMMY_NOTARY)
-            dummyIssueBuilder.addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+                    .addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+                    .addCommand(dummyCommand(notaryServices.legalIdentityKey))
             val dummyIssuePtx = notaryServices.signInitialTransaction(dummyIssueBuilder)
             val dummyIssue = services.addSignature(dummyIssuePtx)
 
@@ -251,10 +253,10 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             assertThat(vaultQuery.queryBy<DummyLinearContract.State>().states).hasSize(1)
 
             // Move the same state
-            val dummyMoveBuilder = TransactionBuilder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
-                addInputState(dummyIssue.tx.outRef<LinearState>(0))
-            }
+            val dummyMoveBuilder = TransactionBuilder(notary = DUMMY_NOTARY)
+                    .addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+                    .addInputState(dummyIssue.tx.outRef<LinearState>(0))
+                    .addCommand(dummyCommand(notaryServices.legalIdentityKey))
 
             val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)
 
@@ -278,7 +280,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vaultQuery.queryBy<DummyDealContract.State>().states
-            deals.forEach { println(it.state.data.ref) }
+            deals.forEach { println(it.state.data.linearId.externalId!!) }
         }
 
         database.transaction {
@@ -306,7 +308,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vaultQuery.queryBy<DummyDealContract.State>().states
-            deals.forEach { println(it.state.data.ref) }
+            deals.forEach { println(it.state.data.linearId.externalId!!) }
 
             services.fillWithSomeTestLinearStates(3)
             val linearStates = vaultQuery.queryBy<DummyLinearContract.State>().states
@@ -318,6 +320,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
                 addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshIdentity)))
                 addInputState(linearStates.first())
                 addInputState(deals.first())
+                addCommand(dummyCommand(notaryServices.legalIdentityKey))
             }
 
             val dummyMove = notaryServices.signInitialTransaction(dummyMoveBuilder)

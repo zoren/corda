@@ -227,14 +227,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
         val permissionGranted = true // TODO define permission control service on ServiceHubInternal and actually check authorization.
         val checkPermissionEvent = FlowPermissionAuditEvent(
-            serviceHub.clock.instant(),
-            flowInitiator,
-            "Flow Permission Required: $permissionName",
-            extraAuditData,
-            logic.javaClass,
-            id,
-            permissionName,
-            permissionGranted)
+                serviceHub.clock.instant(),
+                flowInitiator,
+                "Flow Permission Required: $permissionName",
+                extraAuditData,
+                logic.javaClass,
+                id,
+                permissionName,
+                permissionGranted)
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
         if (!permissionGranted) {
             throw FlowPermissionException("User $flowInitiator not permissioned for $permissionName on flow $id")
@@ -242,16 +242,25 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     // TODO Dummy implementation of access to application specific audit logging
-    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>) {
+    override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>): Unit {
         val flowAuditEvent = FlowAppAuditEvent(
-                    serviceHub.clock.instant(),
-                    flowInitiator,
-                    comment,
-                    extraAuditData,
-                    logic.javaClass,
+                serviceHub.clock.instant(),
+                flowInitiator,
+                comment,
+                extraAuditData,
+                logic.javaClass,
                 id,
                 eventType)
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
+    }
+
+    @Suspendable
+    override fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot? {
+        return FlowStackSnapshotFactory.instance.getFlowStackSnapshot(flowClass)
+    }
+
+    override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) {
+        FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
     }
 
     /**

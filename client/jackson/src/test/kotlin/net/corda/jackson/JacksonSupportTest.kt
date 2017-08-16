@@ -1,16 +1,14 @@
 package net.corda.jackson
 
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.pholser.junit.quickcheck.From
-import com.pholser.junit.quickcheck.Property
-import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.USD
+import net.corda.finance.USD
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.testing.PublicKeyGenerator
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.transactions.SignedTransaction
+import net.corda.finance.parseCurrency
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MINI_CORP
@@ -18,19 +16,17 @@ import net.corda.testing.TestDependencyInjectionBase
 import net.corda.testing.contracts.DummyContract
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.Test
-import org.junit.runner.RunWith
-import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 
-@RunWith(JUnitQuickcheck::class)
 class JacksonSupportTest : TestDependencyInjectionBase() {
     companion object {
         val mapper = JacksonSupport.createNonRpcMapper()
     }
 
-    @Property
-    fun publicKeySerializingWorks(@From(PublicKeyGenerator::class) publicKey: PublicKey) {
+    @Test
+    fun publicKeySerializingWorks() {
+        val publicKey = generateKeyPair().public
         val serialized = mapper.writeValueAsString(publicKey)
         val parsedKey = mapper.readValue(serialized, EdDSAPublicKey::class.java)
         assertEquals(publicKey, parsedKey)
@@ -57,7 +53,7 @@ class JacksonSupportTest : TestDependencyInjectionBase() {
     @Test
     fun writeAmount() {
         val writer = mapper.writer().without(SerializationFeature.INDENT_OUTPUT)
-        assertEquals("""{"notional":"25000000.00 USD"}""", writer.writeValueAsString(Dummy(Amount.parseCurrency("$25000000"))))
+        assertEquals("""{"notional":"25000000.00 USD"}""", writer.writeValueAsString(Dummy(parseCurrency("$25000000"))))
     }
 
     @Test

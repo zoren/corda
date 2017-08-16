@@ -5,7 +5,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.DOLLARS
+import net.corda.finance.DOLLARS
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue
@@ -89,7 +89,7 @@ class FlowFrameworkTests {
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
             nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.registerIdentity(identity)
+                node.services.identityService.verifyAndRegisterIdentity(identity)
             }
         }
     }
@@ -331,9 +331,7 @@ class FlowFrameworkTests {
         node1.services.startFlow(CashIssueFlow(
                 2000.DOLLARS,
                 OpaqueBytes.of(0x01),
-                node1.info.legalIdentity,
-                notary1.info.notaryIdentity,
-                anonymous = false))
+                notary1.info.notaryIdentity))
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
             val flow = node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity, anonymous = false))
@@ -595,7 +593,8 @@ class FlowFrameworkTests {
     @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -609,7 +608,8 @@ class FlowFrameworkTests {
     @Test
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand())
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(WaitingFlows.Waiter::class) {
@@ -625,7 +625,8 @@ class FlowFrameworkTests {
     @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
-        ptx.addOutputState(DummyState())
+                .addOutputState(DummyState())
+                .addCommand(dummyCommand(node1.services.legalIdentityKey))
         val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerFlowFactory(VaultQueryFlow::class) {
