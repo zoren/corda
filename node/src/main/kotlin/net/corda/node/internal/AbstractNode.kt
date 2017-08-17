@@ -505,7 +505,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: X500Name("${configuration.myLegalName},OU=$serviceId")
+            val serviceName = X500Name("${configuration.myLegalName},OU=$serviceId")
             val identity = obtainKeyPair(serviceId, serviceName).first
             ServiceEntry(it, identity)
         }
