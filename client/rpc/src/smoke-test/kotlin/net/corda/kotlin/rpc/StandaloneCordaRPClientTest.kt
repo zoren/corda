@@ -9,6 +9,7 @@ import net.corda.contracts.getCashBalance
 import net.corda.contracts.getCashBalances
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
