@@ -40,7 +40,7 @@ object ConfigHelper {
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
-        log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
+        log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.concise())}")
         return finalConfig
     }
 }

@@ -3,6 +3,7 @@ package net.corda.testing.node
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.getX509Name
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
@@ -131,10 +132,9 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
     fun startNotaryCluster(notaryName: X500Name,
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
-        ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
-                serviceType.id,
-                notaryName)
+        val paths = (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) }
+        val keys = paths.associateBy({ it }, { generateKeyPair() })
+        ServiceIdentityGenerator.generateToDisk(paths, keys, serviceType.id, notaryName)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }

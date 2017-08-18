@@ -15,6 +15,8 @@ import net.corda.cordform.CordformNode
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.node
+import net.corda.node.services.transactions.minCorrectReplicas
+import net.corda.node.utilities.isNotary
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
@@ -64,7 +66,12 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
         }
     }
 
-    override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, advertisedService.type.id, clusterName)
+    override fun setup(nodes: List<CordformNode>, context: CordformContext) {
+        val notaries = nodes.filter { it.isNotary() }
+        val keys = ServiceIdentityGenerator.generateKeys(nodes)
+        ServiceIdentityGenerator.generateToDisk(
+                notaries.map { it.nodeDir.toPath() },
+                keys.mapKeys { kv -> kv.key.nodeDir.toPath() },
+                advertisedService.type.id, clusterName)
     }
 }

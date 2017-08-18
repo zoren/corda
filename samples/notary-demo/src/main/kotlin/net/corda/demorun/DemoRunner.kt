@@ -20,7 +20,8 @@ fun CordformDefinition.runNodes() = driver(
         networkMapStartStrategy = NetworkMapStartStrategy.Nominated(networkMapNodeName),
         portAllocation = PortAllocation.Incremental(10001)
 ) {
-    setup(this)
-    startNodes(nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } })
+    val nodes = nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } }
+    setup(nodes,this)
+    startNodes(nodes)
     waitForAllNodesToFinish()
 }

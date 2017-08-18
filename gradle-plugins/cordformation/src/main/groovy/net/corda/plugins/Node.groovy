@@ -24,7 +24,6 @@ class Node extends CordformNode {
      */
     protected List<String> cordapps = []
 
-    protected File nodeDir
     private Project project
 
     /**
@@ -87,15 +86,7 @@ class Node extends CordformNode {
     }
 
     protected void rootDir(Path rootDir) {
-        def dirName
-        try {
-            X500Name x500Name = new X500Name(name)
-            dirName = x500Name.getRDNs(BCStyle.CN).getAt(0).getFirst().getValue().toString()
-        } catch(IllegalArgumentException ignore) {
-            // Can't parse as an X500 name, use the full string
-            dirName = name
-        }
-        nodeDir = new File(rootDir.toFile(), dirName.replaceAll("\\s",""))
+        nodeDir(new File(rootDir.toFile(), getRelativeDir()))
     }
 
     protected void build() {

@@ -13,6 +13,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.getX509Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
@@ -621,7 +622,8 @@ class DriverDSL(
     ): CordaFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
+        val keys = paths.associateBy({ it }, { generateKeyPair() })
+        ServiceIdentityGenerator.generateToDisk(paths, keys, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
