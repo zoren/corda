@@ -4,6 +4,10 @@ import static java.util.Collections.emptyList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +22,29 @@ public class CordformNode implements NodeDefinition {
 
     public String getName() {
         return name;
+    }
+
+    /**
+     * Set the name of the node.
+     *
+     * @param name The node name.
+     */
+    public void name(String name) {
+        this.name = name;
+        config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name));
+    }
+
+    /**
+     * Path in which the node will be installed.
+     */
+    private File nodeDir;
+
+    public void nodeDir(File nodeDir) {
+        this.nodeDir = nodeDir;
+    }
+
+    public File getNodeDir() {
+        return nodeDir;
     }
 
     /**
@@ -46,14 +73,21 @@ public class CordformNode implements NodeDefinition {
         return config;
     }
 
+
     /**
-     * Set the name of the node.
-     *
-     * @param name The node name.
+     * @return a string representation of the name of this node suitable for being used as a path component.
+     *      Usually this is used to build a path to install a node.
      */
-    public void name(String name) {
-        this.name = name;
-        config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name));
+    public String getRelativeDir() {
+        String dirName;
+        try {
+            X500Name x500Name = new X500Name(getName());
+            dirName = x500Name.getRDNs(BCStyle.CN)[0].getFirst().getValue().toString();
+        } catch (IllegalArgumentException ignore) {
+            // Can't parse as an X500 name, use the full string
+            dirName = getName();
+        }
+        return dirName.replaceAll("\\s","");
     }
 
     /**

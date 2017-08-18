@@ -13,6 +13,7 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
+import net.corda.cordform.CordformNode
 import net.corda.demorun.util.*
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
@@ -40,5 +41,5 @@ object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", 
         }
     }
 
-    override fun setup(context: CordformContext) {}
+    override fun setup(nodes: List<CordformNode>, context: CordformContext) {}
 }

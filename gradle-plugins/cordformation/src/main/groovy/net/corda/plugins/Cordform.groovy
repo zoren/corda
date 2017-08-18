@@ -114,16 +114,19 @@ class Cordform extends DefaultTask {
             def cd = loadCordformDefinition()
             networkMapNodeName = cd.networkMapNodeName.toString()
             cd.nodeConfigurers.each { nc ->
+                // Create a new node and configure it.
                 node { Node it ->
                     nc.accept it
                     it.rootDir directory
                 }
             }
-            cd.setup new CordformContext() {
+            // Nodes now contains all the CordformNode we will want to run.
+            cd.setup(nodes, new CordformContext() {
                 Path baseDirectory(X500Name nodeName) {
+                    // Map from nodeName to its base directory.
                     project.projectDir.toPath().resolve(getNodeByName(nodeName.toString()).nodeDir.toPath())
                 }
-            }
+            })
         } else {
             networkMapNodeName = this.networkMapNodeName
             nodes.each {
