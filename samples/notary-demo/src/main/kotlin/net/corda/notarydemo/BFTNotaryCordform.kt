@@ -9,17 +9,14 @@ import net.corda.demorun.runNodes
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
-import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.node.utilities.NodeInfoFileGenerator
 import net.corda.notarydemo.cordform.isNotary
 import org.bouncycastle.asn1.x500.X500Name
-import java.security.KeyPair
 
 fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 

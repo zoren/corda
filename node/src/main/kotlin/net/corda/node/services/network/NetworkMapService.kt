@@ -7,6 +7,8 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -32,7 +34,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
 import java.security.PublicKey
@@ -176,10 +178,6 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
             val req = message.data.deserialize<UpdateAcknowledge>()
             processAcknowledge(req)
         }
-    }
-
-    protected fun loadFromDisk() {
-        FileTreeWalk(services.configuration.)
     }
 
     @VisibleForTesting
