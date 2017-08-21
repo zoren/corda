@@ -75,6 +75,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override val loadDBSuccess get() = _loadDBSuccess
 
     init {
+
         serviceHub.database.transaction { loadFromDB() }
     }
 
