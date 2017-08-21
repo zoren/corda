@@ -11,6 +11,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
@@ -70,7 +71,7 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
     override fun setup(nodes: List<CordformNode>) {
         val notaries = nodes.filter { it.isNotary() }
         val keys = ServiceIdentityGenerator.generateKeys(nodes)
-        NodeInfoFileGenerator.toDisk(nodes, keys)
+        NodeInfoSerializer.toDisk(keys)
         ServiceIdentityGenerator.generateToDisk(notaries.map { it.nodeDir.toPath() },
                 keys.mapKeys { kv -> kv.key.nodeDir.toPath() },
                 advertisedService.type.id,

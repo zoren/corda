@@ -10,6 +10,7 @@ import java.security.PublicKey
 
 internal val NAME_CONFIG_KEY = "name"
 internal val PUBLIC_KEY_CONFIG_KEY = "public-key"
+internal val NODE_INFO_FOLDER = "additional-node-infos"
 
 object NodeInfoSerializer {
     private fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
@@ -33,7 +34,7 @@ object NodeInfoSerializer {
         })
 
         nodes.forEach { node ->
-            val certPath = node.nodeDir.toPath().resolve("additional-node-infos")
+            val certPath = node.nodeDir.toPath().resolve(NODE_INFO_FOLDER)
             certPath.toFile().mkdirs()
 
             configMap.forEach { (otherNode, config) ->

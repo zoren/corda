@@ -13,7 +13,6 @@ public abstract class CordformDefinition {
     public final Path driverDirectory;
     public final ArrayList<Consumer<? super CordformNode>> nodeConfigurers = new ArrayList<>();
     public final X500Name networkMapNodeName;
-    private Map<CordformNode, KeyPair> map;
 
     public CordformDefinition(Path driverDirectory, X500Name networkMapNodeName) {
         this.driverDirectory = driverDirectory;
@@ -24,7 +23,7 @@ public abstract class CordformDefinition {
         nodeConfigurers.add(configurer);
     }
 
-    private static Map<CordformNode, KeyPair> generateKeys(List<CordformNode> nodes) {
+    private static Map<CordformNode, KeyPair> generateKeysFor(List<CordformNode> nodes) {
         Map<CordformNode, KeyPair> map = new HashMap<>();
         for (CordformNode node : nodes) {
             map.put(node, Crypto.generateKeyPair());
@@ -32,8 +31,12 @@ public abstract class CordformDefinition {
         return map;
     }
 
+    /**
+     * Generates and writes to disk a set of
+     * @param nodes
+     */
     public static void writeKeys(List<CordformNode> nodes) {
-        Map<CordformNode, KeyPair> map = generateKeys(nodes);
+        Map<CordformNode, KeyPair> map = generateKeysFor(nodes);
         NodeInfoSerializer.toDisk(map);
     }
 

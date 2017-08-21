@@ -12,6 +12,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.node
@@ -68,6 +69,7 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     override fun setup(nodes: List<CordformNode>) {
         val notaries = nodes.filter { it.isNotary() }
         val keys = ServiceIdentityGenerator.generateKeys(nodes)
+        NodeInfoSerializer.toDisk(keys)
         ServiceIdentityGenerator.generateToDisk(
                 notaries.map { it.nodeDir.toPath() },
                 keys.mapKeys { kv -> kv.key.nodeDir.toPath() },

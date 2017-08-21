@@ -27,6 +27,7 @@ object ServiceIdentityGenerator {
      * This method should be called *before* any of the nodes are started.
      *
      * @param dirs List of node directories to place the generated identity and key pairs in.
+     * @param keys Map from dirs to the corresponding [KeyPair]
      * @param serviceId The service id of the distributed service.
      * @param serviceName The legal name of the distributed service.
      * @param threshold The threshold for the generated group [CompositeKey].
@@ -34,7 +35,6 @@ object ServiceIdentityGenerator {
     // TODO: This needs to write out to the key store, not just files on disk
     fun generateToDisk(dirs: List<Path>,
                        keys: Map<Path, KeyPair>,
-                       //keyPairs: List<KeyPair>,
                        serviceId: String,
                        serviceName: X500Name,
                        threshold: Int = 1): Unit {
