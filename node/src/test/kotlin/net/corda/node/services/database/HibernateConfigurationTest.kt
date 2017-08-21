@@ -13,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.utils.sumCash
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
@@ -75,7 +76,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
             services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         validatedTransactions.addTransaction(stx)
                     }
@@ -641,9 +642,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("owner")
-        val queryOwnerKey = BOB_PUBKEY.toBase58String()
-        criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryOwnerKey))
+        val queryOwner = BOB.name.toString()
+        criteriaQuery.where(criteriaBuilder.equal(cashStatesSchema.get<String>("owner"), queryOwner))
 
         val joinVaultStatesToCash = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), cashStatesSchema.get<PersistentStateRef>("stateRef"))
         criteriaQuery.where(joinVaultStatesToCash)
@@ -726,9 +726,9 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("participants")
-        val queryParticipantKeys = firstCashState.state.data.participants.map { it.owningKey.toBase58String() }
-        criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryParticipantKeys))
+        val queryParticipants = firstCashState.state.data.participants.map { it.nameOrNull().toString() }
+        val joinCashStateToParty = cashStatesSchema.joinSet<SampleCashSchemaV3.PersistentCashState, String>("participants")
+        criteriaQuery.where(criteriaBuilder.and(joinCashStateToParty.`in`(queryParticipants)))
 
         val joinVaultStatesToCash = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), cashStatesSchema.get<PersistentStateRef>("stateRef"))
         criteriaQuery.where(joinVaultStatesToCash)

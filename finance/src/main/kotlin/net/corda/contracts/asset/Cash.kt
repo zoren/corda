@@ -1,3 +1,4 @@
+@file:JvmName("CashUtilities")   // So the static extension functions get put into a class with a better name than CashKt
 package net.corda.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
@@ -24,6 +25,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
+import net.corda.finance.utils.sumCash
+import net.corda.finance.utils.sumCashOrNull
+import net.corda.finance.utils.sumCashOrZero
 import net.corda.schemas.CashSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
@@ -55,20 +59,6 @@ val CASH_PROGRAM_ID = Cash()
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
-    /**
-     * TODO:
-     * 1) hash should be of the contents, not the URI
-     * 2) allow the content to be specified at time of instance creation?
-     *
-     * Motivation: it's the difference between a state object referencing a programRef, which references a
-     * legalContractReference and a state object which directly references both.  The latter allows the legal wording
-     * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract.
-     */
-    // DOCSTART 2
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
-
-    // DOCEND 2
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Cash.Commands>>
             = commands.select<Cash.Commands>()
 
@@ -93,12 +83,16 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
+        fun ownedBy(owner: AbstractParty) = copy(owner = owner)
+        fun issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
+        fun issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
+        fun withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
-                        owner = this.owner.owningKey.toBase58String(),
+                        owner = this.owner,
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
@@ -120,11 +114,11 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
@@ -277,7 +271,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * otherwise the set of eligible states wil be filtered to only include those from these issuers.
          * @param notary If null the notary source is ignored, if specified then only states marked
          * with this notary are included.
-         * @param lockId The [FlowLogic.runId.uuid] of the flow, which is used to soft reserve the states.
+         * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
          * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
          * @param withIssuerRefs If not empty the specific set of issuer references to match against.
          * @return The matching states that were found. If sufficient funds were found these will be locked,
@@ -323,7 +317,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         AND (vs.lock_id = '$lockId' OR vs.lock_id is null)
                         """ +
                                 (if (notary != null)
-                                    " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
+                                    " AND vs.notary_name = '${notary.name}'" else "") +
                                 (if (onlyFromIssuerParties.isNotEmpty())
                                     " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
                                 (if (withIssuerRefs.isNotEmpty())
@@ -386,36 +380,10 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
 // Small DSL extensions.
 
-/**
- * Sums the cash states in the list belonging to a single owner, throwing an exception
- * if there are none, or if any of the cash states cannot be added together (i.e. are
- * different currencies or issuers).
- */
-fun Iterable<ContractState>.sumCashBy(owner: AbstractParty): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
-
-/**
- * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
- * states cannot be added together (i.e. are different currencies or issuers).
- */
-fun Iterable<ContractState>.sumCash(): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
-
-/** Sums the cash states in the list, returning null if there are none. */
-fun Iterable<ContractState>.sumCashOrNull(): Amount<Issued<Currency>>? = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
-
-/** Sums the cash states in the list, returning zero of the given currency+issuer if there are none. */
-fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Issued<Currency>> {
-    return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
-}
-
-fun Cash.State.ownedBy(owner: AbstractParty) = copy(owner = owner)
-fun Cash.State.issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
-fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
-fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
-
-infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
-infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
-infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
+/** @suppress */ infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
+/** @suppress */ infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
+/** @suppress */ infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+/** @suppress */ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
 
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 

@@ -1,6 +1,6 @@
 package net.corda.contracts.asset
 
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.contracts.NetCommand
 import net.corda.contracts.NetType
 import net.corda.contracts.NettableState
@@ -18,6 +18,10 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
+import net.corda.finance.utils.sumFungibleOrNull
+import net.corda.finance.utils.sumObligations
+import net.corda.finance.utils.sumObligationsOrNull
+import net.corda.finance.utils.sumObligationsOrZero
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
@@ -71,19 +75,6 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  * @param P the product the obligation is for payment of.
  */
 class Obligation<P : Any> : Contract {
-
-    /**
-     * TODO:
-     * 1) hash should be of the contents, not the URI
-     * 2) allow the content to be specified at time of instance creation?
-     *
-     * Motivation: it's the difference between a state object referencing a programRef, which references a
-     * legalContractReference and a state object which directly references both.  The latter allows the legal wording
-     * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract.
-     */
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-
     /**
      * Represents where in its lifecycle a contract state is, which in turn controls the commands that can be applied
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
@@ -197,11 +188,11 @@ class Obligation<P : Any> : Contract {
         /**
          * A command stating that a debt has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : Commands, FungibleAsset.Commands.Move
+        data class Move(override val contract: Class<out Contract>? = null) : Commands, FungibleAsset.Commands.Move
 
         /**
          * Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
@@ -349,15 +340,15 @@ class Obligation<P : Any> : Contract {
         //
         // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
         val assetStates = tx.outputsOfType<FungibleAsset<*>>()
-        val acceptableAssetStates = assetStates
-                // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
-                // verify the asset contract is the asset contract we expect.
-                // Something like:
-                //    attachments.mustHaveOneOf(key.acceptableAssetContract)
-                .filter { it.contract.legalContractReference in template.acceptableContracts }
-                // Restrict the states to those of the correct issuance definition (this normally
-                // covers issued product and obligor, but is opaque to us)
-                .filter { it.amount.token in template.acceptableIssuedProducts }
+        val acceptableContract = tx.attachments.any { it.id in template.acceptableContracts }
+        requireThat {
+            "an acceptable contract is attached" using acceptableContract
+        }
+        val acceptableAssetStates = assetStates.filter {
+            // Restrict the states to those of the correct issuance definition (this normally
+            // covers issued product and obligor, but is opaque to us)
+            it.amount.token in template.acceptableIssuedProducts
+        }
         // Catch that there's nothing useful here, so we can dump out a useful error
         requireThat {
             "there are fungible asset state outputs" using (assetStates.isNotEmpty())
@@ -384,8 +375,8 @@ class Obligation<P : Any> : Contract {
         requireThat {
             // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
             // settled as well
-            "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
-                    .all { it == null || it == Obligation<P>().legalContractReference })
+            "all move commands relate to this contract" using (moveCommands.map { it.value.contract }
+                    .all { it == null || it == this@Obligation.javaClass })
             // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
             // time.
             "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
@@ -483,7 +474,7 @@ class Obligation<P : Any> : Contract {
      * Generate a transaction performing close-out netting of two or more states.
      *
      * @param signer the party which will sign the transaction. Must be one of the obligor or beneficiary.
-     * @param states two or more states, which must be compatible for bilateral netting (same issuance definitions,
+     * @param inputs two or more states, which must be compatible for bilateral netting (same issuance definitions,
      * and same parties involved).
      */
     fun generateCloseOutNetting(tx: TransactionBuilder,
@@ -539,11 +530,12 @@ class Obligation<P : Any> : Contract {
      */
     fun generateCashIssue(tx: TransactionBuilder,
                           obligor: AbstractParty,
+                          acceptableContract: SecureHash,
                           amount: Amount<Issued<Currency>>,
                           dueBefore: Instant,
                           beneficiary: AbstractParty,
                           notary: Party) {
-        val issuanceDef = Terms(NonEmptySet.of(Cash().legalContractReference), NonEmptySet.of(amount.token), dueBefore)
+        val issuanceDef = Terms(NonEmptySet.of(acceptableContract), NonEmptySet.of(amount.token), dueBefore)
         OnLedgerAsset.generateIssue(tx, TransactionState(State(Lifecycle.NORMAL, obligor, issuanceDef, amount.quantity, beneficiary), notary), Commands.Issue())
     }
 
@@ -791,18 +783,6 @@ fun <P : AbstractParty, T : Any> sumAmountsDue(balances: Map<Pair<P, P>, Amount<
 
     return sum
 }
-
-/** Sums the obligation states in the list, throwing an exception if there are none. All state objects in the list are presumed to be nettable. */
-fun <P : Any> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
-
-/** Sums the obligation states in the list, returning null if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>?
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
-
-/** Sums the obligation states in the list, returning zero of the given product if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
 infix fun <T : Any> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
 infix fun <T : Any> Obligation.State<T>.between(parties: Pair<AbstractParty, AbstractParty>) = copy(obligor = parties.first, beneficiary = parties.second)

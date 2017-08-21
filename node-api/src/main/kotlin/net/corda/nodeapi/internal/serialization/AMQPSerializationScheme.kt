@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferedSerializationVersion == AmqpHeaderV1_0
+internal val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == AmqpHeaderV1_0
 
 abstract class AbstractAMQPSerializationScheme : SerializationScheme {
     internal companion object {
@@ -41,7 +41,7 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                     rpcClientSerializerFactory(context)
                 SerializationContext.UseCase.RPCServer ->
                     rpcServerSerializerFactory(context)
-                else -> SerializerFactory(context.whitelist) // TODO pass class loader also
+                else -> SerializerFactory(context.whitelist, context.deserializationClassLoader)
             }
         }.also { registerCustomSerializers(it) }
     }

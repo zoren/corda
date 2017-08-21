@@ -2,13 +2,16 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.Commodity
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.security.PublicKey
+import net.corda.finance.utils.sumCommodities
+import net.corda.finance.utils.sumCommoditiesOrNull
+import net.corda.finance.utils.sumCommoditiesOrZero
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,18 +34,6 @@ val COMMODITY_PROGRAM_ID = CommodityContract()
  */
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
-    /**
-     * TODO:
-     * 1) hash should be of the contents, not the URI
-     * 2) allow the content to be specified at time of instance creation?
-     *
-     * Motivation: it's the difference between a state object referencing a programRef, which references a
-     * legalContractReference and a state object which directly references both.  The latter allows the legal wording
-     * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract
-     */
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/commodity-claims.html")
-
     /** A state representing a commodity claim against some party */
     data class State(
             override val amount: Amount<Issued<Commodity>>,
@@ -54,7 +45,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val contract = COMMODITY_PROGRAM_ID
-        override val exitKeys = Collections.singleton(owner.owningKey)
+        override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Commodity>>, newOwner: AbstractParty): FungibleAsset<Commodity>
@@ -71,11 +62,11 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * @param contract the contract this move is for the attention of. Only that contract's verify function
          * should take the moved states into account when considering whether it is valid. Typically this will be
          * null.
          */
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new commodity states to be issued into existence: the nonce ("number used once") ensures the transaction
@@ -179,15 +170,3 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
 }
-
-/**
- * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
- * states cannot be added together (i.e. are different currencies).
- */
-fun Iterable<ContractState>.sumCommodities() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrThrow()
-
-/** Sums the cash states in the list, returning null if there are none. */
-@Suppress("unused") fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
-
-/** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero(currency)
