@@ -120,13 +120,8 @@ class Cordform extends DefaultTask {
                     it.rootDir directory
                 }
             }
-            // Nodes now contains all the CordformNode we will want to run.
-            cd.setup(nodes, new CordformContext() {
-                Path baseDirectory(X500Name nodeName) {
-                    // Map from nodeName to its base directory.
-                    project.projectDir.toPath().resolve(getNodeByName(nodeName.toString()).nodeDir.toPath())
-                }
-            })
+            // Nodes now contains all the fully-formed CordformNode we will want to run.
+            cd.setup(nodes)
         } else {
             networkMapNodeName = this.networkMapNodeName
             nodes.each {
@@ -134,6 +129,7 @@ class Cordform extends DefaultTask {
             }
         }
         installRunScript()
+        CordformDefinition.writeKeys(nodes)
         def networkMapNode = getNodeByName(networkMapNodeName)
         if (networkMapNode == null)
             throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")

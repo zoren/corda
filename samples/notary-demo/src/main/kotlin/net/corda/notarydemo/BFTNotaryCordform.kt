@@ -16,7 +16,7 @@ import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.NodeInfoFileGenerator
-import net.corda.node.utilities.isNotary
+import net.corda.notarydemo.cordform.isNotary
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.KeyPair
 
@@ -67,7 +67,7 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
         }
     }
 
-    override fun setup(nodes: List<CordformNode>, context: CordformContext) {
+    override fun setup(nodes: List<CordformNode>) {
         val notaries = nodes.filter { it.isNotary() }
         val keys = ServiceIdentityGenerator.generateKeys(nodes)
         NodeInfoFileGenerator.toDisk(nodes, keys)

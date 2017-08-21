@@ -12,11 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 
-fun CordformNode.isNotary() : Boolean {
-    return this.advertisedServices
-            .map { service -> ServiceInfo.parse(service) }
-            .any { serviceInfo -> serviceInfo.type.isNotary() }
-}
+
 
 object ServiceIdentityGenerator {
     private val log = loggerFor<ServiceIdentityGenerator>()
@@ -55,6 +51,5 @@ object ServiceIdentityGenerator {
             Files.write(dir.resolve(privateKeyFile), keyPair.private.encoded)
             Files.write(dir.resolve(publicKeyFile), keyPair.public.encoded)
         }
-        //return Party(serviceName, notaryKey)
     }
 }
