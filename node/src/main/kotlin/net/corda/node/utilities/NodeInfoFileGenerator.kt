@@ -26,20 +26,23 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.CertPath
 
-val NAME_CONFIG_KEY = "name"
-val PUBLIC_KEY_CONFIG_KEY = "public-key"
+internal val NAME_CONFIG_KEY = "name"
+internal val PUBLIC_KEY_CONFIG_KEY = "public-key"
 
 object NodeInfoFileGenerator {
     private val logger = loggerFor<NodeInfoFileGenerator>()
 
-
-    fun makeConfig(cordformNode: CordformNode, key: PublicKey) : Config {
+    private fun makeConfig(cordformNode: CordformNode, key: PublicKey) : Config {
         // Note key.toBase58String() requires corda serialization to have been bootstrapped.
         return configOf(
                 NAME_CONFIG_KEY to cordformNode.name,
                 PUBLIC_KEY_CONFIG_KEY to String(Base64.encode(key.encoded)))
     }
 
+    /**
+     * @param nodes
+     * @param keys
+     */
     fun toDisk(nodes: List<CordformNode>, keys : Map<CordformNode, KeyPair>) {
         val configMap = LinkedHashMap<CordformNode, Config>()
         nodes.forEach { node ->
@@ -55,8 +58,6 @@ object NodeInfoFileGenerator {
                 file.writeText(config.root().render(ConfigRenderOptions.defaults()))
             }
         }
-
-
     }
 
     fun fromDisk(file: File, certPath: CertPath) : NodeInfo {
@@ -75,22 +76,4 @@ object NodeInfoFileGenerator {
 
         return NodeInfo(addresses, legalIdentityAndCert, legalIdentitiesAndCerts, platformVersion, advertisedServices, worldMapLocation)
     }
-}
-
-
-
-
-fun loadFromFile(file : File) : NodeInfo {
-    val signedData: SignedData<NodeInfo> = ByteSequence.of(file.readBytes()).deserialize()
-    // TODO: check the signature
-    return signedData.verified()
-}
-
-fun saveToFile(path : Path, nodeInfo: NodeInfo, keyManager: KeyManagementService, publicKey: PublicKey) {
-    path.toFile().mkdirs()
-    val sb : SerializedBytes<NodeInfo> = nodeInfo.serialize()
-    val regSig = keyManager.sign(sb.bytes, publicKey)
-    val sd : SignedData<NodeInfo> = SignedData(sb, regSig)
-    val file : File =  (path / sd.hashCode().toString()).toFile()
-    file.writeBytes(sd.serialize().bytes)
 }

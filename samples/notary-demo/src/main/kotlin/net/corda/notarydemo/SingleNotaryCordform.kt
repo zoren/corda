@@ -41,5 +41,5 @@ object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", 
         }
     }
 
-    override fun setup(nodes: List<CordformNode>, context: CordformContext) {}
+    override fun setup(nodes: List<CordformNode>) {}
 }

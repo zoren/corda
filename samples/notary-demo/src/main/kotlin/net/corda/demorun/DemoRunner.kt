@@ -21,7 +21,7 @@ fun CordformDefinition.runNodes() = driver(
         portAllocation = PortAllocation.Incremental(10001)
 ) {
     val nodes = nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } }
-    setup(nodes,this)
+    setup(nodes)
     startNodes(nodes)
     waitForAllNodesToFinish()
 }
