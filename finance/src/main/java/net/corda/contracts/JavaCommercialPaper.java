@@ -3,12 +3,9 @@ package net.corda.contracts;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import kotlin.Pair;
 import kotlin.Unit;
 import net.corda.contracts.asset.Cash;
-import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
-import net.corda.core.crypto.SecureHash;
 import net.corda.core.crypto.testing.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
@@ -16,6 +13,7 @@ import net.corda.core.identity.Party;
 import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.TransactionBuilder;
+import net.corda.finance.utils.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,7 +81,7 @@ public class JavaCommercialPaper implements Contract {
             return owner;
         }
 
-        public Amount<Issued<Currency>> getFaceValue() {
+        Amount<Issued<Currency>> getFaceValue() {
             return faceValue;
         }
 
@@ -121,7 +119,7 @@ public class JavaCommercialPaper implements Contract {
             return result;
         }
 
-        public State withoutOwner() {
+        State withoutOwner() {
             return new State(issuance, new AnonymousParty(NullPublicKey.INSTANCE), faceValue, maturityDate);
         }
 
@@ -173,9 +171,7 @@ public class JavaCommercialPaper implements Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         final List<AuthenticatedObject<CommandData>> commands = tx.getCommands().stream().filter(
-                it -> {
-                    return it.getValue() instanceof Commands;
-                }
+                it -> it.getValue() instanceof Commands
         ).collect(Collectors.toList());
         final AuthenticatedObject<CommandData> command = Iterables.getOnlyElement(commands);
         final TimeWindow timeWindow = tx.getTimeWindow();
@@ -207,7 +203,7 @@ public class JavaCommercialPaper implements Contract {
                 final Instant time = null == timeWindow
                         ? null
                         : timeWindow.getUntilTime();
-                final Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs().stream().map(TransactionState::getData).collect(Collectors.toList()), input.getOwner());
+                final Amount<Issued<Currency>> received = StateSumming.sumCashBy(tx.getOutputStates(), input.getOwner());
 
                 requireThat(require -> {
                     require.using("must be timestamped", timeWindow != null);
@@ -237,13 +233,6 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    @NotNull
-    @Override
-    public SecureHash getLegalContractReference() {
-        // TODO: Should return hash of the contract's contents, not its URI
-        return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
-    }
-
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
         State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary, encumbrance);
@@ -256,7 +245,7 @@ public class JavaCommercialPaper implements Contract {
 
     @Suspendable
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, ServiceHub services) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.EMPTY_SET);
+        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), Collections.emptySet());
         tx.addInputState(paper);
         tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }

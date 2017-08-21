@@ -2,7 +2,7 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import io.requery.PersistenceException
 import io.requery.kotlin.eq
 import io.requery.query.RowExpression
@@ -98,7 +98,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         contractStateClassName = it.value.state.data.javaClass.name
                         contractState = it.value.state.serialize(context = STORAGE_CONTEXT).bytes
                         notaryName = it.value.state.notary.name.toString()
-                        notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
                     }
                     insert(state)

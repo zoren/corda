@@ -28,7 +28,7 @@ object NotSupportedSeralizationScheme : SerializationScheme {
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> = doThrow()
 }
 
-data class SerializationContextImpl(override val preferedSerializationVersion: ByteSequence,
+data class SerializationContextImpl(override val preferredSerializationVersion: ByteSequence,
                                     override val deserializationClassLoader: ClassLoader,
                                     override val whitelist: ClassWhitelist,
                                     override val properties: Map<Any, Any>,
@@ -52,7 +52,7 @@ data class SerializationContextImpl(override val preferedSerializationVersion: B
         })
     }
 
-    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferedSerializationVersion = versionHeader)
+    override fun withPreferredSerializationVersion(versionHeader: ByteSequence) = copy(preferredSerializationVersion = versionHeader)
 }
 
 private const val HEADER_SIZE: Int = 8
@@ -68,11 +68,9 @@ open class SerializationFactoryImpl : SerializationFactory {
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): SerializationScheme {
         // truncate sequence to 8 bytes, and make sure it's a copy to avoid holding onto large ByteArrays
         return schemes.computeIfAbsent(byteSequence.take(HEADER_SIZE).copy() to target) {
-            for (scheme in registeredSchemes) {
-                if (scheme.canDeserializeVersion(it.first, it.second)) {
-                    return@computeIfAbsent scheme
-                }
-            }
+            registeredSchemes
+                    .filter { scheme -> scheme.canDeserializeVersion(it.first, it.second) }
+                    .forEach { return@computeIfAbsent it }
             NotSupportedSeralizationScheme
         }
     }
@@ -81,7 +79,7 @@ open class SerializationFactoryImpl : SerializationFactory {
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T = schemeFor(byteSequence, context.useCase).deserialize(byteSequence, clazz, context)
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return schemeFor(context.preferedSerializationVersion, context.useCase).serialize(obj, context)
+        return schemeFor(context.preferredSerializationVersion, context.useCase).serialize(obj, context)
     }
 
     fun registerScheme(scheme: SerializationScheme) {
@@ -119,7 +117,7 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
     override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
-abstract class AbstractKryoSerializationScheme(val serializationFactory: SerializationFactory) : SerializationScheme {
+abstract class AbstractKryoSerializationScheme : SerializationScheme {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
@@ -131,7 +129,7 @@ abstract class AbstractKryoSerializationScheme(val serializationFactory: Seriali
                 SerializationContext.UseCase.Checkpoint ->
                     KryoPool.Builder {
                         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                        val classResolver = CordaClassResolver(serializationFactory, context).apply { setKryo(serializer.kryo) }
+                        val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
                         // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                         val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                         serializer.kryo.apply {
@@ -147,7 +145,7 @@ abstract class AbstractKryoSerializationScheme(val serializationFactory: Seriali
                     rpcServerKryoPool(context)
                 else ->
                     KryoPool.Builder {
-                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(serializationFactory, context))).apply { classLoader = it.second }
+                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context))).apply { classLoader = it.second }
                     }.build()
             }
         }

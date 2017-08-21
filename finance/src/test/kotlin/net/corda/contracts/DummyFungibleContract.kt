@@ -1,7 +1,6 @@
 package net.corda.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
@@ -12,6 +11,9 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.finance.utils.sumCash
+import net.corda.finance.utils.sumCashOrNull
+import net.corda.finance.utils.sumCashOrZero
 import net.corda.schemas.SampleCashSchemaV1
 import net.corda.schemas.SampleCashSchemaV2
 import net.corda.schemas.SampleCashSchemaV3
@@ -19,8 +21,6 @@ import java.security.PublicKey
 import java.util.*
 
 class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Commands, DummyFungibleContract.State>() {
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
-
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<DummyFungibleContract.Commands>>
             = commands.select<DummyFungibleContract.Commands>()
 
@@ -54,7 +54,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV2 -> SampleCashSchemaV2.PersistentCashState(
-                        _participants = this.participants.toSet(),
+                        _participants = this.participants.toMutableSet(),
                         _owner = this.owner,
                         _quantity = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
@@ -62,12 +62,12 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         _issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV3 -> SampleCashSchemaV3.PersistentCashState(
-                        _participants = this.participants.toSet(),
-                        _owner = this.owner,
-                        _quantity = this.amount.quantity,
-                        _currency = this.amount.token.product.currencyCode,
-                        _issuerParty = this.amount.token.issuer.party,
-                        _issuerRef = this.amount.token.issuer.reference.bytes
+                        participants = this.participants.toMutableSet(),
+                        owner = this.owner,
+                        pennies = this.amount.quantity,
+                        currency = this.amount.token.product.currencyCode,
+                        issuer = this.amount.token.issuer.party,
+                        issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
@@ -79,7 +79,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
 
     interface Commands : FungibleAsset.Commands {
 
-        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
+        data class Move(override val contract: Class<out Contract>? = null) : FungibleAsset.Commands.Move, Commands
 
         data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 
