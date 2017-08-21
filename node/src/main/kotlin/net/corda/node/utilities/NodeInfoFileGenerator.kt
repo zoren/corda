@@ -25,6 +25,9 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.CertPath
+import java.security.cert.CertPathBuilder
+import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
 
 internal val NAME_CONFIG_KEY = "name"
 internal val PUBLIC_KEY_CONFIG_KEY = "public-key"
@@ -40,33 +43,21 @@ object NodeInfoFileGenerator {
     }
 
     /**
-     * @param nodes
-     * @param keys
+     *
      */
-    fun toDisk(nodes: List<CordformNode>, keys : Map<CordformNode, KeyPair>) {
-        val configMap = LinkedHashMap<CordformNode, Config>()
-        nodes.forEach { node ->
-            configMap.put(node, makeConfig(node, keys[node]!!.public))
-        }
-        
-        nodes.forEach { node ->
-            val certPath = node.nodeDir.toPath() / "additional-node-infos"
-            certPath.toFile().mkdirs()
+    fun fromDisk(file: File, clientCA : CertificateAndKeyPair, ccp : Array<out Certificate>) : NodeInfo {
 
-            configMap.forEach { (otherNode,config) ->
-                val file = (certPath / otherNode.relativeDir).toFile()
-                file.writeText(config.root().render(ConfigRenderOptions.defaults()))
-            }
-        }
-    }
-
-    fun fromDisk(file: File, certPath: CertPath) : NodeInfo {
         val appConfig = ConfigFactory.parseFile(file)
         val name: X500Name = X500Name(appConfig.getString(NAME_CONFIG_KEY))
-        val owningKey = Crypto.decodePublicKey(Base64.decode(appConfig.getString(PUBLIC_KEY_CONFIG_KEY)))
+        val publicKey = Crypto.decodePublicKey(Base64.decode(appConfig.getString(PUBLIC_KEY_CONFIG_KEY)))
 
-        val x509 = X509CertificateHolder(certPath.certificates.first().encoded)
-        val partyAndCertificate = PartyAndCertificate(name, owningKey ,x509, certPath)
+        val thatCert = X509Utilities.createCertificate(
+                CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, name, publicKey)
+
+
+        val certPath = CertificateFactory.getInstance("X509").generateCertPath(listOf(thatCert.cert) + ccp)
+
+        val partyAndCertificate = PartyAndCertificate(certPath)
         val addresses: List<NetworkHostAndPort> = listOf()
         val legalIdentityAndCert = partyAndCertificate //TODO This field will be removed in future PR which gets rid of services.
         val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate> = NonEmptySet.of(legalIdentityAndCert)

@@ -178,6 +178,10 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         }
     }
 
+    protected fun loadFromDisk() {
+        FileTreeWalk(services.configuration.)
+    }
+
     @VisibleForTesting
     fun unregisterNetworkHandlers() {
         for (handler in handlers) {

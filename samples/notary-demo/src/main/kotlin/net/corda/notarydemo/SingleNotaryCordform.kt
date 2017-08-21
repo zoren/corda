@@ -14,7 +14,9 @@ import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NodeInfoSerializer
 import net.corda.demorun.util.*
+import net.corda.node.utilities.ServiceIdentityGenerator
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 
@@ -41,5 +43,8 @@ object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", 
         }
     }
 
-    override fun setup(nodes: List<CordformNode>) {}
+    override fun setup(nodes: List<CordformNode>) {
+        val keys = ServiceIdentityGenerator.generateKeys(nodes)
+        NodeInfoSerializer.toDisk(keys)
+    }
 }
