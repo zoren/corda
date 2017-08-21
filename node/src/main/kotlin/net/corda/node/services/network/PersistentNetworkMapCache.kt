@@ -9,6 +9,8 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.div
+import net.corda.core.internal.isDirectory
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -30,10 +32,7 @@ import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.DatabaseTransactionManager
-import net.corda.node.utilities.bufferUntilDatabaseCommit
-import net.corda.node.utilities.wrapWithDatabaseTransaction
+import net.corda.node.utilities.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -331,4 +330,32 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
             }
         }
     }
+
+    private fun loadFromFiles() {
+        logger.info("Loading network map from files..")
+        val configuration = serviceHub.configuration
+        val caKeyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
+
+        val nodeInfoDirectory = configuration.baseDirectory / NODE_INFO_FOLDER
+        if (nodeInfoDirectory.isDirectory()) {
+            var readFiles = 0
+            for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) {
+                try {
+                    logger.info("Reading NodeInfo from file: ${nodeInfoDirectory.toString()}")
+                    val nodeInfo = NodeInfoDeserializer.fromDisk(
+                            file,
+                            caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                            caKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA))
+                    addNode(nodeInfo)
+                    readFiles++
+                } catch (e : Exception) {
+                    logger.warn("Exception parsing NodeInfo from file. ${file}: " + e)
+                }
+            }
+            logger.info("Succesfully read and loaded {$readFiles} files.")
+        } else {
+            logger.info("{$nodeInfoDirectory} isn't a Directory, not loading NodeInfo from files")
+        }
+    }
+
 }

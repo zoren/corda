@@ -44,8 +44,8 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
     // For example, cash is used by the vault for coin selection (but will be extracted as a standalone CorDapp in future)
     val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
-                    Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
-                    Pair(NodeServicesV1, SchemaService.SchemaOptions()))
+                  Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
         mappedSchema -> Pair(mappedSchema, SchemaService.SchemaOptions())

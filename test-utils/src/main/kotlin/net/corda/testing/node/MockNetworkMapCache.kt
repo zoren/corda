@@ -19,7 +19,6 @@ import java.math.BigInteger
 /**
  * Network map cache with no backing map service.
  */
-
 class MockNetworkMapCache(serviceHub: ServiceHubInternal) : PersistentNetworkMapCache(serviceHub) {
     private companion object {
         val BANK_C = getTestPartyAndCertificate(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
