@@ -12,6 +12,8 @@ internal val NAME_CONFIG_KEY = "name"
 internal val PUBLIC_KEY_CONFIG_KEY = "public-key"
 internal val NODE_INFO_FOLDER = "additional-node-infos"
 
+internal val renderOptions =  ConfigRenderOptions.defaults().setOriginComments(false).setComments(false).setJson(false)
+
 object NodeInfoSerializer {
     private fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 
@@ -34,12 +36,12 @@ object NodeInfoSerializer {
         })
 
         nodes.forEach { node ->
-            val certPath = node.nodeDir.toPath().resolve(NODE_INFO_FOLDER)
-            certPath.toFile().mkdirs()
+            val nodePath = node.nodeDir.toPath().resolve(NODE_INFO_FOLDER)
+            nodePath.toFile().mkdirs()
 
             configMap.forEach { (otherNode, config) ->
-                val file = (certPath.resolve(otherNode.relativeDir)).toFile()
-                file.writeText(config.root().render(ConfigRenderOptions.defaults()))
+                val file = (nodePath.resolve(otherNode.relativeDir + ".conf")).toFile()
+                file.writeText(config.root().render(renderOptions))
             }
         }
     }
