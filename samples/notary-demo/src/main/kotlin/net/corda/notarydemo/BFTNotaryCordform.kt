@@ -7,21 +7,19 @@ import net.corda.testing.BOB
 import net.corda.demorun.util.*
 import net.corda.demorun.runNodes
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
-import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.internal.stream
 import net.corda.core.internal.toTypedArray
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.minCorrectReplicas
-import net.corda.notarydemo.cordform.isNotary
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 
 private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
+private val clusterAddresses = (0 until clusterSize).stream().mapToObj { NetworkHostAndPort("localhost", 11000 + it * 10) }.toTypedArray()
 
 object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
     private val clusterName = X500Name("CN=BFT,O=R3,OU=corda,L=Zurich,C=CH")
@@ -39,7 +37,6 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
             p2pPort(10005)
             rpcPort(10006)
         }
-        val clusterAddresses = (0 until clusterSize).stream().mapToObj { NetworkHostAndPort("localhost", 11000 + it * 10) }.toTypedArray()
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
             advertisedServices(advertisedService)
@@ -66,13 +63,7 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
     }
 
     override fun setup(nodes: List<CordformNode>) {
-        val notaries = nodes.filter { it.isNotary() }
-        val keys = ServiceIdentityGenerator.generateKeys(nodes)
-        NodeInfoSerializer.toDisk(keys)
-        ServiceIdentityGenerator.generateToDisk(notaries.map { it.nodeDir.toPath() },
-                keys.mapKeys { kv -> kv.key.nodeDir.toPath() },
-                advertisedService.type.id,
-                clusterName,
-                minCorrectReplicas(clusterSize))
+        notaryClusterSetup(nodes, clusterName, clusterAddresses.toList(),
+                advertisedService.type.id, minCorrectReplicas(clusterSize))
     }
 }

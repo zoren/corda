@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.cordform.NODE_INFO_FOLDER
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.parsePublicKeyBase58
@@ -74,7 +75,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override val loadDBSuccess get() = _loadDBSuccess
 
     init {
-
+        loadFromFiles()
         serviceHub.database.transaction { loadFromDB() }
     }
 
@@ -339,17 +340,23 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         val nodeInfoDirectory = configuration.baseDirectory / NODE_INFO_FOLDER
         if (nodeInfoDirectory.isDirectory()) {
             var readFiles = 0
-            for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) {
+            for (file in nodeInfoDirectory.toFile().walk().maxDepth(1)) if (file.isFile) {
+                var nodeInfo : NodeInfo? = null
                 try {
                     logger.info("Reading NodeInfo from file: ${nodeInfoDirectory.toString()}")
-                    val nodeInfo = NodeInfoDeserializer.fromDisk(
+                    nodeInfo = NodeInfoDeserializer.fromDisk(
                             file,
                             caKeyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
                             caKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA))
-                    addNode(nodeInfo)
                     readFiles++
                 } catch (e : Exception) {
-                    logger.warn("Exception parsing NodeInfo from file. ${file}: " + e)
+                    logger.error("Exception parsing NodeInfo from file. ${file}: " + e)
+                }
+                try {
+                    nodeInfo?.let { addNode(it) }
+                } catch (e : Exception) {
+                    logger.error("Exception putting the generated NodeInfo in the DB. ${nodeInfo}: " + e)
+                    e.printStackTrace()
                 }
             }
             logger.info("Succesfully read and loaded {$readFiles} files.")

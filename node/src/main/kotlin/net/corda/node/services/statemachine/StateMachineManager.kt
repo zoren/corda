@@ -181,13 +181,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         })
     }
 
-    private fun checkQuasarJavaAgentPresence() {
-        check(SuspendableHelper.isJavaAgentActive(), {
-            """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
-               #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
-        })
-    }
-
     private fun listenToLedgerTransactions() {
         // Observe the stream of committed, validated transactions and resume fibers that are waiting for them.
         serviceHub.validatedTransactions.updates.subscribe { stx ->

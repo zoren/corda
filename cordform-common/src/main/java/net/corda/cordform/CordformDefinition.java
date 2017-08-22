@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toMap;
 
 public abstract class CordformDefinition {
     public final Path driverDirectory;
@@ -23,21 +26,18 @@ public abstract class CordformDefinition {
         nodeConfigurers.add(configurer);
     }
 
-    private static Map<CordformNode, KeyPair> generateKeysFor(List<CordformNode> nodes) {
-        Map<CordformNode, KeyPair> map = new HashMap<>();
-        for (CordformNode node : nodes) {
-            map.put(node, Crypto.generateKeyPair());
-        }
-        return map;
-    }
-
     /**
-     * Generates and writes to disk a set of
-     * @param nodes
+     * Generates and writes identities keyPairs for each node to disk.
+     * @param nodes the nodes.
      */
-    public static void writeKeys(List<CordformNode> nodes) {
-        Map<CordformNode, KeyPair> map = generateKeysFor(nodes);
-        NodeInfoSerializer.toDisk(map);
+    public static void generateAndWriteIdentityKeys(List<CordformNode> nodes) {
+        Map<NodeInfo, KeyPair> nodeInfos = NodeInfoSerializer.generateKeysFor(nodes);
+
+        // Write each node identity to disk.
+        NodeInfoSerializer.writeKeyPairs(nodeInfos, "identity");
+
+        // Populate the additional-node-infos folder inside each "path".
+        NodeInfoSerializer.serializeNodeInfo(nodeInfos.keySet());
     }
 
     /**

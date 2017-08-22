@@ -127,9 +127,12 @@ class Cordform extends DefaultTask {
             nodes.each {
                 it.rootDir directory
             }
+            // writeKeys is static on CordformDefinition it can be invoked even when we don't have a custom
+            // CordformDefinition
+            CordformDefinition.generateAndWriteIdentityKeys(nodes)
         }
         installRunScript()
-        CordformDefinition.writeKeys(nodes)
+
         def networkMapNode = getNodeByName(networkMapNodeName)
         if (networkMapNode == null)
             throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")

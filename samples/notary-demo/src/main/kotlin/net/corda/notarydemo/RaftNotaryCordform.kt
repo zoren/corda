@@ -8,15 +8,11 @@ import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.demorun.util.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
-import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
-import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.node
-import net.corda.notarydemo.cordform.isNotary
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
@@ -24,6 +20,7 @@ fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 internal fun createNotaryNames(clusterSize: Int) = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
 
 private val notaryNames = createNotaryNames(3)
+private val clusterAddress = NetworkHostAndPort("localhost", 10008) // Otherwise each notary forms its own cluster.
 
 object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
     private val clusterName = X500Name("CN=Raft,O=R3,OU=corda,L=Zurich,C=CH")
@@ -51,7 +48,6 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
             p2pPort(10009)
             rpcPort(10010)
         }
-        val clusterAddress = NetworkHostAndPort("localhost", 10008) // Otherwise each notary forms its own cluster.
         notaryNode(1) {
             notaryNodePort(10012)
             p2pPort(10013)
@@ -67,12 +63,7 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     }
 
     override fun setup(nodes: List<CordformNode>) {
-        val notaries = nodes.filter { it.isNotary() }
-        val keys = ServiceIdentityGenerator.generateKeys(nodes)
-        NodeInfoSerializer.toDisk(keys)
-        ServiceIdentityGenerator.generateToDisk(
-                notaries.map { it.nodeDir.toPath() },
-                keys.mapKeys { kv -> kv.key.nodeDir.toPath() },
-                advertisedService.type.id, clusterName)
+        notaryClusterSetup(nodes, clusterName, listOf(clusterAddress), advertisedService.type.id)
     }
 }
+

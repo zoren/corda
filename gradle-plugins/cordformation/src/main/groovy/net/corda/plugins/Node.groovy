@@ -86,7 +86,7 @@ class Node extends CordformNode {
     }
 
     protected void rootDir(Path rootDir) {
-        nodeDir(new File(rootDir.toFile(), getRelativeDir()))
+        nodeDir(new File(rootDir.toFile(), getDirName()))
     }
 
     protected void build() {

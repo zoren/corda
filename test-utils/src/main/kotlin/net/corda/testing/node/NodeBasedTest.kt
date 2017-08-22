@@ -133,7 +133,7 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         val paths = (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) }
-        val keys = paths.associateBy({ it }, { generateKeyPair() })
+        val keys = paths.associate { it to generateKeyPair() }
         ServiceIdentityGenerator.generateToDisk(paths, keys, serviceType.id, notaryName)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)

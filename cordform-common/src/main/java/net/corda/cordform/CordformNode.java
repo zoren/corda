@@ -73,12 +73,11 @@ public class CordformNode implements NodeDefinition {
         return config;
     }
 
-
     /**
-     * @return a string representation of the name of this node suitable for being used as a path component.
+     * @return a string representation of the name of this node suitable for being used as a path component or file name.
      *      Usually this is used to build a path to install a node.
      */
-    public String getRelativeDir() {
+    public String getDirName() {
         String dirName;
         try {
             X500Name x500Name = new X500Name(getName());
