@@ -75,28 +75,6 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
     }
 }
 
-class IdentitySyncHandler(val otherSide: Party) : FlowLogic<Unit>() {
-    companion object {
-        object RECEIVING_IDENTITIES : ProgressTracker.Step("Receiving confidential identities")
-        object RECEIVING_CERTIFICATES : ProgressTracker.Step("Receiving certificates for unknown identities")
-    }
-
-    override val progressTracker: ProgressTracker = ProgressTracker(RECEIVING_IDENTITIES, RECEIVING_CERTIFICATES)
-
-    @Suspendable
-    override fun call(): Unit {
-        progressTracker.currentStep = RECEIVING_IDENTITIES
-        val allIdentities = receive<List<AnonymousParty>>(otherSide).unwrap { it }
-        val unknownIdentities = allIdentities.filter { serviceHub.identityService.partyFromKey(it.owningKey) == null }
-        val missingIdentities: List<PartyAndCertificate> = sendAndReceive<List<PartyAndCertificate>>(otherSide, unknownIdentities).unwrap { it }
-        missingIdentities.forEach { identity ->
-            serviceHub.identityService.verifyAndRegisterIdentity(identity)
-        }
-        // Send a notice over to the remote party to indicate we've synced
-        send(otherSide, true)
-    }
-}
-
 class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
     constructor(otherSide: Party) : this(otherSide, false)
     companion object {
