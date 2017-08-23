@@ -4,11 +4,9 @@ import org.bouncycastle.asn1.x500.X500Name;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -31,7 +29,7 @@ public abstract class CordformDefinition {
      * @param nodes the nodes.
      */
     public static void generateAndWriteIdentityKeys(List<CordformNode> nodes) {
-        Map<NodeInfo, KeyPair> nodeInfos = NodeInfoSerializer.generateKeysFor(nodes);
+        Map<CordformNodeInfo, KeyPair> nodeInfos = NodeInfoSerializer.generateKeysFor(nodes);
 
         // Write each node identity to disk.
         NodeInfoSerializer.writeKeyPairs(nodeInfos, "identity");

@@ -1,7 +1,7 @@
 package net.corda.notarydemo
 
 import net.corda.cordform.CordformNode
-import net.corda.cordform.NodeInfo
+import net.corda.cordform.CordformNodeInfo
 import net.corda.cordform.NodeInfoSerializer
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -41,7 +41,7 @@ fun notaryClusterSetup(nodes: List<CordformNode>,
             notaryKeys.mapKeys { kv -> kv.key.nodeDir.toPath() },
             advertisedServiceId, clusterName, replicas)
 
-    val notaryClusterNode = NodeInfo(clusterName.toString(), notaries.map { it -> it.nodeDir.toPath() },
+    val notaryClusterNode = CordformNodeInfo(clusterName.toString(), notaries.map { it -> it.nodeDir.toPath() },
             "notaryCluster", clusterAddress.toString(), compositeKey)
 
     val nodeInfos = NodeInfoSerializer.generateKeysFor(nonNotaries)

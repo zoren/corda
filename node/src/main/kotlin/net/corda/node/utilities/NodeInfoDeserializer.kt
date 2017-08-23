@@ -50,7 +50,7 @@ object NodeInfoDeserializer {
         val legalIdentitiesAndCerts: NonEmptySet<PartyAndCertificate> = NonEmptySet.of(legalIdentityAndCert)
         val platformVersion: Int = 0
         val advertisedServices: List<ServiceEntry> = emptyList()
-        val worldMapLocation: WorldMapLocation? = null
+        val worldMapLocation: WorldMapLocation = WorldMapLocation()
 
         return NodeInfo(addresses, legalIdentityAndCert, legalIdentitiesAndCerts, platformVersion, advertisedServices, worldMapLocation)
     }

@@ -75,8 +75,10 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     override val loadDBSuccess get() = _loadDBSuccess
 
     init {
-        loadFromFiles()
-        serviceHub.database.transaction { loadFromDB() }
+        serviceHub.database.transaction {
+            loadFromFiles()
+            loadFromDB()
+        }
     }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
