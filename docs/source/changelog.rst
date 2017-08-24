@@ -6,6 +6,12 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Cash selection algorithm is now pluggable (with H2 being the default implementation)
+
+* Removed usage of Requery ORM library (repalced with JPA/Hibernate)
+
+* Vault Query performance improvement (replaced expensive per query SQL statement to obtain concrete state types
+  with single query on start-up followed by dynamic updates using vault state observable))
 
 * Vault Query fix: filter by multiple issuer names in ``FungibleAssetQueryCriteria``
 
@@ -55,6 +61,9 @@ UNRELEASED
 
 * ``WebServerPluginRegistry`` now has a ``customizeJSONSerialization`` which can be overridden to extend the REST JSON
   serializers. In particular the IRS demos must now register the ``BusinessCalendar`` serializers.
+
+* Moved ``:finance`` gradle project files into a ``net.corda.finance`` package namespace.
+  This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
 
 Milestone 14
 ------------

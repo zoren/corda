@@ -3,7 +3,6 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -23,6 +22,7 @@ import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -262,8 +262,8 @@ object FlowCookbook {
             //    fork the contract's verification logic.
             val typeOnlyCommandData: TypeOnlyCommandData = DummyContract.Commands.Create()
             // 2. Include additional data which can be used by the contract
-            //    during verification, alongside fulfilling the roles above
-            val commandDataWithData: CommandData = Cash.Commands.Issue(nonce = 12345678)
+            //    during verification, alongside fulfilling the roles above.
+            val commandDataWithData: CommandData = Cash.Commands.Issue()
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been

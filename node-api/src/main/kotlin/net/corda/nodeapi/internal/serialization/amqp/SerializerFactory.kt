@@ -4,10 +4,7 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.carpenterSchema
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -159,7 +156,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
             processSchema(schema)
-            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
+            serializersByDescriptor[typeDescriptor] ?:
+                    throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
         }()
     }
 
@@ -224,7 +222,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
-                    whitelisted(type.componentType())
+                    // Allow Object[] since this can be quite common (i.e. an untyped array)
+                    if(type.componentType() != Object::class.java) whitelisted(type.componentType())
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
@@ -258,10 +257,14 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
 
     private fun whitelisted(type: Type) {
         val clazz = type.asClass()!!
-        if (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz)) {
+        if (isNotWhitelisted(clazz)) {
             throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
         }
     }
+
+    // Ignore SimpleFieldAccess as we add it to anything we build in the carpenter.
+    internal fun isNotWhitelisted(clazz: Class<*>): Boolean = clazz == SimpleFieldAccess::class.java ||
+            (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz))
 
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
@@ -321,6 +324,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+            is WildcardType -> "Any"
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
