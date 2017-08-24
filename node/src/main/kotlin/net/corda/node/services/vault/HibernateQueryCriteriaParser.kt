@@ -22,7 +22,7 @@ import javax.persistence.criteria.*
 
 
 class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
-                                   val contractTypeMappings: Map<String, List<String>>,
+                                   val contractTypeMappings: Map<String, Set<String>>,
                                    val criteriaBuilder: CriteriaBuilder,
                                    val criteriaQuery: CriteriaQuery<Tuple>,
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : IQueryCriteriaParser {
@@ -45,7 +45,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         // contract State Types
         val combinedContractTypeTypes = criteria.contractStateTypes?.plus(contractType) ?: setOf(contractType)
         combinedContractTypeTypes.filter { it.name != ContractState::class.java.name }.let {
-            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: emptyList() }
+            val interfaces = it.flatMap { contractTypeMappings[it.name] ?: listOf(it.name) }
             val concrete = it.filter { !it.isInterface }.map { it.name }
             val all = interfaces.plus(concrete)
             if (all.isNotEmpty())
