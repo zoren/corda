@@ -416,8 +416,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val legalIdentity = obtainIdentity("identity", configuration.myLegalName)
         network = makeMessagingService(legalIdentity)
         info = makeInfo(legalIdentity)
-        saveToFile(this)
         System.getProperty("corda.NodeInfoQuit")?.let {
+            NodeInfoSerializer.saveToFile(this)
             log.info("Peacefully quitting after having written my NodeInfo to disk")
             System.exit(0)
         }

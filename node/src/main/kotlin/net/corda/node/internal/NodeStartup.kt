@@ -14,7 +14,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.network.saveToFile
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.TestClock
@@ -113,8 +112,6 @@ open class NodeStartup(val args: Array<String>) {
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
             node.startupComplete.then {
                 try {
-                    saveToFile(node)
-                    if (cmdlineOptions.printNodeInfoAndQuit) System.exit(0)
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
                     logger.error("Shell failed to start", e)
