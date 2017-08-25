@@ -308,14 +308,23 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 /** For serialising an ed25519 public key */
 @ThreadSafe
 object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
+    private val cache = object : LinkedHashMap<SecureHash, EdDSAPublicKey>(4096, 0.75f, false) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<SecureHash, EdDSAPublicKey>): Boolean {
+            return size > 8192
+        }
+    }
+
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
         check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
         output.writeBytesWithLength(obj.abyte)
+        cache[SecureHash.Companion.sha256(obj.abyte)] = obj
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
         val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
+        return cache.getOrPut(SecureHash.Companion.sha256(A),
+                { EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)) } )
+
     }
 }
 
