@@ -27,6 +27,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -66,7 +67,7 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     }
 
     @Entity
-    @javax.persistence.Table(name = "notary_committed_states")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class RaftState(
             @Id
             @Column
