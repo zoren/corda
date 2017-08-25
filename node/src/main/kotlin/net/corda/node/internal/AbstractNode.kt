@@ -492,7 +492,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val allIdentitiesSet = (advertisedServiceEntries.map { it.identity } + services.legalIdentity).toNonEmptySet() // TODO Will we keep service identities here, for example notaries?
+        val allIdentitiesSet = advertisedServiceEntries.map { it.identity } + services.legalIdentity // TODO Will we keep service identities here, for example notaries?
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         return NodeInfo(addresses, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
     }
