@@ -28,7 +28,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
         val stateMachineRunId = uuidString("state_machine_run_id")
     }
 
-    private class TransactionMappingsMap : AbstractJDBCHashMap<SecureHash, StateMachineRunId, Table>(Table, loadOnInit = false) {
+    private class TransactionMappingsMap : AbstractJDBCHashMap<SecureHash, StateMachineRunId, Table>(Table, loadOnInit = false, maxBuckets = 512) {
         override fun keyFromRow(row: ResultRow): SecureHash = row[table.txId]
 
         override fun valueFromRow(row: ResultRow): StateMachineRunId = StateMachineRunId(row[table.stateMachineRunId])
