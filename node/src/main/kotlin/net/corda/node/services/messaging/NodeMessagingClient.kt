@@ -113,13 +113,13 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
             return PersistentMap(
                     toPersistentEntityKey = { it },
-                    fromPersistentEntity = { Pair(it.key,
+                    fromPersistentEntity = { Pair(it.key.toLong(),
                             Pair(it.message.deserialize( context = SerializationDefaults.STORAGE_CONTEXT),
                                     it.recipients.deserialize( context = SerializationDefaults.STORAGE_CONTEXT))
                     ) },
                     toPersistentEntity = { _key: Long, (_message: Message, _recipient: MessageRecipients): Pair<Message, MessageRecipients> ->
                         RetryMessage().apply {
-                            key = _key
+                            key = _key.toInt()
                             message = _message.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                             recipients = _recipient.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
@@ -191,7 +191,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     class RetryMessage(
             @Id
             @Column(name = "message_id", length = 36)
-            var key: Long = 0,
+            var key: Int = 0, //Caused by: java.sql.SQLSyntaxErrorException: ORA-02269: key column cannot be of LONG datatype
 
             @Lob
             @Column
