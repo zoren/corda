@@ -14,7 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class FlowVersioningTest : NodeBasedTest() {
-    @Test
+//    @Test
     fun `getFlowContext returns the platform version for core flows`() {
         val (alice, bob) = listOf(
                 startNode(ALICE.name, platformVersion = 2),

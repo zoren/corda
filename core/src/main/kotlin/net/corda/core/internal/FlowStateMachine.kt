@@ -9,6 +9,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
@@ -63,4 +64,5 @@ interface FlowStateMachine<R> {
     val id: StateMachineRunId
     val resultFuture: CordaFuture<R>
     val flowInitiator: FlowInitiator
+    val me: PartyAndCertificate
 }

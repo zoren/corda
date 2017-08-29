@@ -533,7 +533,7 @@ class TwoPartyTradeFlowTests {
                           val notary: NodeInfo,
                           val assetToSell: StateAndRef<OwnableState>,
                           val price: Amount<Currency>,
-                          val me: AnonymousParty) : FlowLogic<SignedTransaction>() {
+                          val myParty: AnonymousParty) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
@@ -542,7 +542,7 @@ class TwoPartyTradeFlowTests {
                     notary,
                     assetToSell,
                     price,
-                    me))
+                    myParty))
         }
     }
 

@@ -66,7 +66,7 @@ open class MockServiceHubInternal(
     override val legalIdentity: PartyAndCertificate
         get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo
-        get() = NodeInfo(listOf(MOCK_HOST_AND_PORT), NonEmptySet.of(DUMMY_IDENTITY_1), 1) // Required to get a dummy platformVersion when required for tests.
+        get() = NodeInfo(listOf(MOCK_HOST_AND_PORT), listOf(DUMMY_IDENTITY_1), 1) // Required to get a dummy platformVersion when required for tests.
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>
         get() = throw UnsupportedOperationException()
@@ -78,8 +78,9 @@ open class MockServiceHubInternal(
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw UnsupportedOperationException()
 
-    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
-        return smm.executor.fetchFrom { smm.add(logic, flowInitiator) }
+    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate?): FlowStateMachineImpl<T> {
+        check(me == null || me in myInfo.legalIdentitiesAndCerts) { "Attempt to start a flow with legal identity not belonging to this node." }
+        return smm.executor.fetchFrom { smm.add(logic, flowInitiator, me) }
     }
 
     override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null

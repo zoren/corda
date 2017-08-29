@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
@@ -117,7 +118,7 @@ interface ServiceHubInternal : PluginServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator, me: PartyAndCertificate? = null): FlowStateMachineImpl<T>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -130,11 +131,12 @@ interface ServiceHubInternal : PluginServiceHub {
     fun <T : Any> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
+            me: PartyAndCertificate? = null,
             vararg args: Any?): FlowStateMachineImpl<T> {
         val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
-        return startFlow(logic, flowInitiator)
+        return startFlow(logic, flowInitiator, me)
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?

@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -147,10 +148,11 @@ class CordaRPCOpsImpl(
 
     private fun <T : Any> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
         require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
+        val me = services.myInfo.legalIdentitiesAndCerts.first() // TODO RPC flows should have mapping user -> identity that should be resolved automatically on starting flow.
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
-        return services.invokeFlowAsync(logicType, currentUser, *args)
+        return services.invokeFlowAsync(logicType, currentUser, me, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {

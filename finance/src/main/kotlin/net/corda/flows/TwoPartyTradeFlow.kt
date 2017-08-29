@@ -59,7 +59,7 @@ object TwoPartyTradeFlow {
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
-                      val me: AbstractParty,
+                      val myParty: AbstractParty, // TODO Left because in tests it's used to pass anonymous party.
                       override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -78,7 +78,7 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(price, me)
+            val hello = SellerTradeInfo(price, myParty)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
             // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
@@ -89,7 +89,7 @@ object TwoPartyTradeFlow {
             // DOCSTART 5
             val signTransactionFlow = object : SignTransactionFlow(otherParty, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
-                    if (stx.tx.outputStates.sumCashBy(me).withoutIssuer() != price)
+                    if (stx.tx.outputStates.sumCashBy(myParty).withoutIssuer() != price)
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
