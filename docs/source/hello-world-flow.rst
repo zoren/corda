@@ -63,8 +63,6 @@ the following:
             /** The flow logic is encapsulated within the call() method. */
             @Suspendable
             override fun call() {
-                // We retrieve the required identities from the ServiceHub.
-                val me = serviceHub.legalIdentity.party
                 val notary = serviceHub.networkMapCache.getAnyNotary()
 
                 // We create a transaction builder

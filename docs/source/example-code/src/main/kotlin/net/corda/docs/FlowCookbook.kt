@@ -10,6 +10,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.node.chooseIdentity
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.Vault.Page
 import net.corda.core.node.services.queryBy
@@ -24,6 +25,7 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import org.bouncycastle.asn1.x500.X500Name
@@ -249,7 +251,7 @@ object FlowCookbook {
             // matching every public key in all of the transaction's commands.
             // DOCSTART 24
             val commandData: DummyContract.Commands.Create = DummyContract.Commands.Create()
-            val ourPubKey: PublicKey = serviceHub.legalIdentityKey
+            val ourPubKey: PublicKey = serviceHub.chooseIdentity().owningKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
             val ourCommand: Command<DummyContract.Commands.Create> = Command(commandData, requiredSigners)

@@ -52,7 +52,7 @@ object AutoOfferFlow {
             // need to pick which ever party is not us
             val otherParty = notUs(dealToBeOffered.participants).map { serviceHub.identityService.partyFromAnonymous(it) }.requireNoNulls().single()
             progressTracker.currentStep = DEALING
-            val myKey = serviceHub.legalIdentityKey
+            val myKey = me.owningKey
             val instigator = Instigator(
                     otherParty,
                     AutoOffer(notary, dealToBeOffered),
@@ -64,7 +64,7 @@ object AutoOfferFlow {
         }
 
         private fun <T : AbstractParty> notUs(parties: List<T>): List<T> {
-            return parties.filter { serviceHub.legalIdentity.party != it }
+            return parties.filter { me.party != it }
         }
     }
 

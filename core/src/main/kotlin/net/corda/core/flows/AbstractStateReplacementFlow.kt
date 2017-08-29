@@ -191,7 +191,8 @@ abstract class AbstractStateReplacementFlow {
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead
-            val myKey = serviceHub.legalIdentityKey
+            // TODO Check the set of multiple identities?
+            val myKey = me.owningKey
 
             val requiredKeys = if (stx.isNotaryChangeTransaction()) {
                 stx.resolveNotaryChangeTransaction(serviceHub).requiredSigningKeys

@@ -13,6 +13,7 @@ import net.corda.flows.CashPaymentFlow;
 import net.corda.node.internal.Node;
 import net.corda.node.services.transactions.ValidatingNotaryService;
 import net.corda.nodeapi.User;
+import net.corda.testing.CoreTestUtils;
 import net.corda.testing.node.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
@@ -69,7 +70,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 dollars123, OpaqueBytes.of("1".getBytes()),
-                node.getServices().getLegalIdentity().getParty(), node.getServices().getLegalIdentity().getParty());
+                CoreTestUtils.chooseIdentity(node.getInfo()), CoreTestUtils.chooseIdentity(node.getInfo()));
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

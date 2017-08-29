@@ -77,7 +77,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         // This will break if a party uses anything other than their legalIdentityKey.
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
-        val myKey = serviceHub.legalIdentityKey
+        val myKey = me.owningKey
         val signed = partiallySignedTx.sigs.map { it.by }
         val notSigned = partiallySignedTx.tx.requiredSigningKeys - signed
 
@@ -246,7 +246,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction) {
         // TODO: Revisit when key management is properly fleshed out.
-        val myKey = serviceHub.legalIdentityKey
+        val myKey = me.owningKey
         require(myKey in stx.tx.requiredSigningKeys) {
             "Party is not a participant for any of the input states of transaction ${stx.id}"
         }

@@ -6,6 +6,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.TestDependencyInjectionBase
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
 import org.junit.Before
@@ -63,8 +64,8 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
             tx.addInputState(makeDummyStateAndRef(i.toString()))
             tx.addOutputState(makeDummyState(i))
             tx.addOutputState(makeDummyState(i.toString()))
-            tx.addCommand(Commands.Cmd1(i), listOf(services.legalIdentityKey))
-            tx.addCommand(Commands.Cmd2(i), listOf(services.legalIdentityKey))
+            tx.addCommand(Commands.Cmd1(i), listOf(services.myInfo.chooseIdentity().owningKey))
+            tx.addCommand(Commands.Cmd2(i), listOf(services.myInfo.chooseIdentity().owningKey))
         }
         return tx.toLedgerTransaction(services)
     }

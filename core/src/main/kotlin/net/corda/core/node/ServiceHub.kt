@@ -5,6 +5,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -113,19 +114,7 @@ interface ServiceHub : ServicesForResolution {
         }
     }
 
-    /** Node's primary identity */
-    val legalIdentity: PartyAndCertificate
-
-    /**
-     * Helper property to shorten code for fetching the the [PublicKey] portion of the
-     * Node's primary signing identity.
-     * Typical use is during signing in flows and for unit test signing.
-     * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
-     * the matching [java.security.PrivateKey] will be looked up internally and used to sign.
-     * If the key is actually a CompositeKey, the first leaf key hosted on this node
-     * will be used to create the signature.
-     */
-    val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
+    private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
 
     /**
      * Helper property to shorten code for fetching the the [PublicKey] portion of the
@@ -242,3 +231,5 @@ interface ServiceHub : ServicesForResolution {
      */
     fun jdbcSession(): Connection
 }
+
+fun ServiceHub.chooseIdentity(): Party = this.myInfo.legalIdentitiesAndCerts.first().party

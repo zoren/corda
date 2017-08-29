@@ -12,6 +12,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.aliceBobAndNotary
+import net.corda.testing.chooseIdentity
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.driver.driver
 import org.junit.Test
@@ -32,7 +33,7 @@ class LargeTransactionsTest {
                     .addAttachment(hash2)
                     .addAttachment(hash3)
                     .addAttachment(hash4)
-            val stx = serviceHub.signInitialTransaction(tx, serviceHub.legalIdentityKey)
+            val stx = serviceHub.signInitialTransaction(tx, serviceHub.myInfo.chooseIdentity().owningKey)
             // Send to the other side and wait for it to trigger resolution from us.
             val bob = serviceHub.identityService.partyFromX500Name(BOB.name)!!
             subFlow(SendTransactionFlow(bob, stx))

@@ -16,6 +16,7 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.testing.chooseIdentity
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -118,10 +119,10 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
             startVerifier(notary)
-            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), alice.mainIdentity, notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
+            alice.rpc.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), alice.nodeInfo.chooseIdentity(), notaryFuture.get().nodeInfo.notaryIdentity).returnValue.get()
             notary.waitUntilNumberOfVerifiers(1)
             for (i in 1..10) {
-                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.mainIdentity).returnValue.get()
+                alice.rpc.startFlow(::CashPaymentFlow, 10.DOLLARS, alice.nodeInfo.chooseIdentity()).returnValue.get()
             }
         }
     }

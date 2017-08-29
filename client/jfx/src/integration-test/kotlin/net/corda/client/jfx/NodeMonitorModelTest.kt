@@ -11,11 +11,11 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
@@ -37,9 +37,9 @@ import org.junit.Test
 import rx.Observable
 
 class NodeMonitorModelTest : DriverBasedTest() {
-    lateinit var aliceNodeIdentity: Party
-    lateinit var bobNodeIdentity: Party
-    lateinit var notaryNodeIdentity: Party
+    lateinit var aliceNode: NodeInfo
+    lateinit var bobNode: NodeInfo
+    lateinit var notaryNode: NodeInfo
 
     lateinit var rpc: CordaRPCOps
     lateinit var rpcBob: CordaRPCOps
@@ -50,7 +50,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var newNodeIdentity: (X500Name) -> Party
+    lateinit var newNode: (X500Name) -> NodeInfo
 
     override fun setup() = driver {
         val cashUser = User("user1", "test", permissions = setOf(
@@ -62,9 +62,9 @@ class NodeMonitorModelTest : DriverBasedTest() {
         val notaryNodeFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
-        aliceNodeIdentity = aliceNodeHandle.mainIdentity
-        notaryNodeIdentity = notaryNodeHandle.nodeInfo.notaryIdentity
-        newNodeIdentity = { nodeName -> startNode(nodeName).getOrThrow().mainIdentity }
+        aliceNode = aliceNodeHandle.nodeInfo
+        notaryNode = notaryNodeHandle.nodeInfo
+        newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
         stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
         stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
@@ -77,7 +77,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
         rpc = monitor.proxyObservable.value!!
 
         val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
-        bobNodeIdentity = bobNodeHandle.mainIdentity
+        bobNode = bobNodeHandle.nodeInfo
         val monitorBob = NodeMonitorModel()
         stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
         monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password, initialiseSerialization = false)
@@ -87,27 +87,20 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `network map update`() {
-        newNodeIdentity(CHARLIE.name)
+        newNode(CHARLIE.name)
         networkMapUpdates.filter { !it.node.advertisedServices.any { it.info.type.isNotary() } }
                 .filter { !it.node.advertisedServices.any { it.info.type == NetworkMapService.type } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(ALICE.name in output.node.legalIdentitiesAndCerts.map { it.name }) {
-                                    "Expecting in identities set: ${ALICE.name}, Actual : ${output.node.legalIdentitiesAndCerts.map { it.name }}"
-                                }
+                                require(output.node.chooseIdentity().name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(BOB.name in output.node.legalIdentitiesAndCerts.map { it.name }) {
-                                    "Expecting in identities set: ${BOB.name}, Actual : ${output.node.legalIdentitiesAndCerts.map { it.name }}"
-                                }
+                                require(output.node.chooseIdentity().name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.chooseIdentity().name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(CHARLIE.name in output.node.legalIdentitiesAndCerts.map { it.name }) {
-                                    "Expecting in identities set: ${CHARLIE.name}, Actual : ${output.node.legalIdentitiesAndCerts.map { it.name }}"
-                                }
-
+                                require(output.node.chooseIdentity().name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.chooseIdentity().name}" }
                             }
                     )
                 }
@@ -119,8 +112,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
-                aliceNodeIdentity,
-                notaryNodeIdentity,
+                aliceNode.chooseIdentity(),
+                notaryNode.notaryIdentity,
                 anonymous
         )
 
@@ -143,8 +136,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         val anonymous = false
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNodeIdentity, notaryNodeIdentity, anonymous).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNodeIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.chooseIdentity(), notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.chooseIdentity(), anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -177,7 +170,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNodeIdentity.name)
+                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.chooseIdentity().name)
                     }
             )
         }
@@ -190,7 +183,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Only Alice signed
-                        val aliceKey = aliceNodeIdentity.owningKey
+                        val aliceKey = aliceNode.chooseIdentity().owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
                         require(aliceKey.isFulfilledBy(signaturePubKeys))
                         issueTx = stx
@@ -201,8 +194,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNodeIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                        require(notaryNodeIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(aliceNode.chooseIdentity().owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         moveTx = stx
                     }
             )

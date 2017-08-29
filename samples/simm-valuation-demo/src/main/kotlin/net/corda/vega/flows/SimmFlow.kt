@@ -53,16 +53,13 @@ object SimmFlow {
                     val existing: StateAndRef<PortfolioState>?)
         : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
-
-        lateinit var myIdentity: Party
         lateinit var notary: Party
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
-            logger.debug("Calling from: ${serviceHub.legalIdentity.party}. Sending to: $otherParty")
+            logger.debug("Calling from: ${me.party}. Sending to: $otherParty")
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
-            myIdentity = serviceHub.legalIdentity.party
 
             val criteria = LinearStateQueryCriteria(participants = listOf(otherParty))
             val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
@@ -83,7 +80,7 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
-            val parties = Pair(myIdentity, otherParty)
+            val parties = Pair(me.party, otherParty)
             val portfolioState = PortfolioState(portfolio.refs, PortfolioSwap(), parties, valuationDate)
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
@@ -185,13 +182,10 @@ object SimmFlow {
      */
     @InitiatedBy(Requester::class)
     class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
-        lateinit var ownParty: Party
         lateinit var offer: OfferMessage
 
         @Suspendable
         override fun call() {
-            ownParty = serviceHub.legalIdentity.party
-
             val criteria = LinearStateQueryCriteria(participants = listOf(replyToParty))
             val trades = serviceHub.vaultQueryService.queryBy<IRSState>(criteria).states
             val portfolio = Portfolio(trades)
@@ -292,7 +286,7 @@ object SimmFlow {
             val seller = TwoPartyDealFlow.Instigator(
                     replyToParty,
                     TwoPartyDealFlow.AutoOffer(offer.notary, offer.dealBeingOffered),
-                    serviceHub.legalIdentityKey)
+                    me.owningKey)
             logger.info("Starting two party deal initiator with: ${replyToParty.name}")
             return subFlow(seller)
         }

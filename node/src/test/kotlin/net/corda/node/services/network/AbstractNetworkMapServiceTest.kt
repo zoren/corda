@@ -27,6 +27,8 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.CHARLIE
 import net.corda.testing.DUMMY_MAP
+import net.corda.testing.chooseIdentity
+import net.corda.testing.chooseIdentityAndCert
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -201,7 +203,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun MockNode.identityQuery(): NodeInfo? {
-        val request = QueryIdentityRequest(services.legalIdentity, network.myAddress)
+        val request = QueryIdentityRequest(services.myInfo.chooseIdentityAndCert(), network.myAddress)
         val response = services.networkService.sendRequest<QueryIdentityResponse>(QUERY_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response.getOrThrow().node
@@ -219,7 +221,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
-        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, services.legalIdentityKey), network.myAddress)
+        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, info.chooseIdentity().owningKey), network.myAddress)
         val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response
