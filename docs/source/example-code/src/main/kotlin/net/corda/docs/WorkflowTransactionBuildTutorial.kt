@@ -44,9 +44,8 @@ data class TradeApprovalContract(private val blank: Void? = null) : Contract {
                      val source: Party,
                      val counterparty: Party,
                      val state: WorkflowState = WorkflowState.NEW,
-                     override val linearId: UniqueIdentifier = UniqueIdentifier(tradeId),
-                     override val contract: TradeApprovalContract = TradeApprovalContract()) : LinearState {
-
+                     override val linearId: UniqueIdentifier = UniqueIdentifier(tradeId)) : LinearState {
+        override val contract = TradeApprovalContract::class.java.name
         val parties: List<Party> get() = listOf(source, counterparty)
         override val participants: List<AbstractParty> get() = parties
     }

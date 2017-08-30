@@ -57,7 +57,7 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
 
     class AttachmentDummyContract : Contract {
         data class State(val magicNumber: Int = 0) : ContractState {
-            override val contract = ATTACHMENT_TEST_PROGRAM_ID
+            override val contract = ATTACHMENT_TEST_PROGRAM_ID::class.java.name
             override val participants: List<AbstractParty>
                 get() = listOf()
         }

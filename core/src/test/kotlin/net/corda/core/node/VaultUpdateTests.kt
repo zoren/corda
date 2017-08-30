@@ -22,7 +22,7 @@ class VaultUpdateTests {
     private class DummyState : ContractState {
         override val participants: List<AbstractParty>
             get() = emptyList()
-        override val contract = VaultUpdateTests.DummyContract
+        override val contract = VaultUpdateTests.DummyContract::class.java.name
     }
 
     private val stateRef0 = StateRef(SecureHash.randomSHA256(), 0)

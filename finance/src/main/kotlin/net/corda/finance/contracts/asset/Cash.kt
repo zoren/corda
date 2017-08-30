@@ -121,7 +121,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
-        override val contract = CASH_PROGRAM_ID
+        override val contract = CASH_PROGRAM_ID::class.java.name
         override val participants = listOf(owner)
 
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>

@@ -19,7 +19,6 @@ import java.time.temporal.ChronoUnit
  * given point in time. This state can be consumed to create a new state with a mutated valuation or portfolio.
  */
 data class PortfolioState(val portfolio: List<StateRef>,
-                          override val contract: PortfolioSwap,
                           private val _parties: Pair<AbstractParty, AbstractParty>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
@@ -31,6 +30,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     override val participants: List<AbstractParty> get() = _parties.toList()
     val ref: String get() = linearId.toString()
     val valuer: AbstractParty get() = participants[0]
+    override val contract = PortfolioSwap::class.java.name
 
     override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity {
         val flow = flowLogicRefFactory.create(SimmRevaluation.Initiator::class.java, thisStateRef, LocalDate.now())

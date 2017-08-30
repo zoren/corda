@@ -46,8 +46,8 @@ class ScheduledFlowTests {
                               val source: Party,
                               val destination: Party,
                               val processed: Boolean = false,
-                              override val linearId: UniqueIdentifier = UniqueIdentifier(),
-                              override val contract: Contract = DummyContract()) : SchedulableState, LinearState {
+                              override val linearId: UniqueIdentifier = UniqueIdentifier()) : SchedulableState, LinearState {
+        override val contract = DummyContract::class.java.name
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             if (!processed) {
                 val logicRef = flowLogicRefFactory.create(ScheduledFlow::class.java, thisStateRef)

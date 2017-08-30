@@ -200,7 +200,7 @@ class ContractUpgradeFlowTest {
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
-            override val contract = CashV2()
+            override val contract = CashV2::class.java.name
             override val participants = owners
 
             override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))

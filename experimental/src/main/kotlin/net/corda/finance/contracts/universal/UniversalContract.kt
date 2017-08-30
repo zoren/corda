@@ -15,7 +15,7 @@ val UNIVERSAL_PROGRAM_ID = UniversalContract()
 class UniversalContract : Contract {
     data class State(override val participants: List<AbstractParty>,
                      val details: Arrangement) : ContractState {
-        override val contract = UNIVERSAL_PROGRAM_ID
+        override val contract = UNIVERSAL_PROGRAM_ID::class.java.name
     }
 
     interface Commands : CommandData {

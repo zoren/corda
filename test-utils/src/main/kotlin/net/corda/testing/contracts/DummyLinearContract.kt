@@ -31,16 +31,15 @@ class DummyLinearContract : Contract {
 
     data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
-            override val contract: Contract = DummyLinearContract(),
             override val participants: List<AbstractParty> = listOf(),
             val linearString: String = "ABC",
             val linearNumber: Long = 123L,
             val linearTimestamp: java.time.Instant = LocalDateTime.now().toInstant(UTC),
             val linearBoolean: Boolean = true,
             val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState, QueryableState {
+        override val contract = DummyLinearContract::class.java.name
 
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(DummyLinearStateSchemaV1, DummyLinearStateSchemaV2)
-
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is DummyLinearStateSchemaV1 -> DummyLinearStateSchemaV1.PersistentDummyLinearState(

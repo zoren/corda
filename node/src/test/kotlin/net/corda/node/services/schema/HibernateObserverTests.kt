@@ -72,7 +72,7 @@ class HibernateObserverTests {
             throw UnsupportedOperationException()
         }
 
-        override val contract: Contract
+        override val contract: String
             get() = throw UnsupportedOperationException()
 
         override val participants: List<AbstractParty>

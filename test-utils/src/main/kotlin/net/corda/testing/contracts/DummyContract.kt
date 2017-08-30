@@ -8,7 +8,7 @@ import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
-val DUMMY_PROGRAM_ID = DummyContract()
+val DUMMY_PROGRAM_ID = DummyContract::class.java.name
 
 data class DummyContract(val blank: Any? = null) : Contract {
     interface State : ContractState {

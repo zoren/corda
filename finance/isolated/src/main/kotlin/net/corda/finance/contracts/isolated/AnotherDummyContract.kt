@@ -7,7 +7,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.nodeapi.DummyContractBackdoor
 
-val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
+val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract::class.java.name
 
 class AnotherDummyContract : Contract, DummyContractBackdoor {
     data class State(val magicNumber: Int = 0) : ContractState {

@@ -133,7 +133,7 @@ class Obligation<P : Any> : Contract {
             val beneficiary: AbstractParty
     ) : FungibleAsset<Obligation.Terms<P>>, NettableState<State<P>, MultilateralNetState<P>> {
         override val amount: Amount<Issued<Terms<P>>> = Amount(quantity, Issued(obligor.ref(0), template))
-        override val contract = OBLIGATION_PROGRAM_ID
+        override val contract = OBLIGATION_PROGRAM_ID::class.java.name
         override val exitKeys: Collection<PublicKey> = setOf(beneficiary.owningKey)
         val dueBefore: Instant = template.dueBefore
         override val participants: List<AbstractParty> = listOf(obligor, beneficiary)

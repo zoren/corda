@@ -17,13 +17,14 @@ import java.security.PublicKey
 data class IRSState(val swap: SwapData,
                     val buyer: AbstractParty,
                     val seller: AbstractParty,
-                    override val contract: OGTrade,
                     override val linearId: UniqueIdentifier = UniqueIdentifier(swap.id.first + swap.id.second)) : DealState {
     val ref: String get() = linearId.externalId!! // Same as the constructor for UniqueIdentified
     override val participants: List<AbstractParty> get() = listOf(buyer, seller)
 
+    override val contract = OGTrade::class.java.name
+
     override fun generateAgreement(notary: Party): TransactionBuilder {
-        val state = IRSState(swap, buyer, seller, OGTrade())
+        val state = IRSState(swap, buyer, seller)
         return TransactionBuilder(notary).withItems(state, Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
     }
 }

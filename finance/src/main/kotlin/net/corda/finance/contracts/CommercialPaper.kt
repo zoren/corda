@@ -50,7 +50,7 @@ class CommercialPaper : Contract {
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, QueryableState, ICommercialPaperState {
-        override val contract = CP_PROGRAM_ID
+        override val contract = CP_PROGRAM_ID::class.java.name
         override val participants = listOf(owner)
 
         override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))

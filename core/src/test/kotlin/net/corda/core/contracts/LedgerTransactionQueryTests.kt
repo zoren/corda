@@ -33,12 +33,12 @@ class LedgerTransactionQueryTests : TestDependencyInjectionBase() {
 
 
     private class StringTypeDummyState(val data: String) : ContractState {
-        override val contract: Contract = DummyContract()
+        override val contract = DummyContract::class.java.name
         override val participants: List<AbstractParty> = emptyList()
     }
 
     private class IntTypeDummyState(val data: Int) : ContractState {
-        override val contract: Contract = DummyContract()
+        override val contract = DummyContract::class.java.name
         override val participants: List<AbstractParty> = emptyList()
     }
 

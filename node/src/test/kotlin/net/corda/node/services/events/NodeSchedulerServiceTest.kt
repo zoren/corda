@@ -131,7 +131,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             return ScheduledActivity(flowLogicRef, instant)
         }
 
-        override val contract: Contract
+        override val contract: ContractClassName
             get() = throw UnsupportedOperationException()
     }
 

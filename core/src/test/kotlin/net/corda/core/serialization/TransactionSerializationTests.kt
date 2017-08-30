@@ -15,7 +15,7 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
+val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash::class.java.name
 
 class TransactionSerializationTests : TestDependencyInjectionBase() {
     class TestCash : Contract {
@@ -26,7 +26,7 @@ class TransactionSerializationTests : TestDependencyInjectionBase() {
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,
                 override val owner: AbstractParty) : OwnableState {
-            override val contract: Contract = TEST_PROGRAM_ID
+            override val contract = TEST_PROGRAM_ID
             override val participants: List<AbstractParty>
                 get() = listOf(owner)
 

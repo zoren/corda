@@ -521,10 +521,8 @@ class SerializationOutputTests {
     }
 
     class FooState : ContractState {
-        override val contract: Contract
-            get() = FooContract
-        override val participants: List<AbstractParty>
-            get() = emptyList()
+        override val contract = FooContract::class.java.name
+        override val participants: List<AbstractParty> = emptyList()
     }
 
     @Test

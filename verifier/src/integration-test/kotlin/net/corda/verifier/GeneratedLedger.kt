@@ -181,7 +181,7 @@ data class GeneratedState(
         val nonce: Long,
         override val participants: List<AbstractParty>
 ) : ContractState {
-    override val contract = DummyContract()
+    override val contract = DummyContract::class.java.name
 }
 
 class GeneratedAttachment(

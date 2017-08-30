@@ -93,8 +93,8 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public Contract getContract() {
-            return JCP_PROGRAM_ID;
+        public String getContract() {
+            return JCP_PROGRAM_ID.getClass().getName();
         }
 
         @Override

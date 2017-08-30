@@ -608,7 +608,7 @@ class InterestRateSwap : Contract {
             override val linearId: UniqueIdentifier = UniqueIdentifier(common.tradeID)
     ) : FixableDealState, SchedulableState {
 
-        override val contract = IRS_PROGRAM_ID
+        override val contract = IRS_PROGRAM_ID::class.java.name
 
         override val oracleType: ServiceType
             get() = NodeInterestRates.Oracle.type

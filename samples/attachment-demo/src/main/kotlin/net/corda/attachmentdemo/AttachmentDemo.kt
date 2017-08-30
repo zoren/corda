@@ -188,7 +188,7 @@ class AttachmentContract : Contract {
     object Command : TypeOnlyCommandData()
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
-        override val contract: Contract = AttachmentContract()
+        override val contract = AttachmentContract::class.java.name
         override val participants: List<AbstractParty> = emptyList()
     }
 }

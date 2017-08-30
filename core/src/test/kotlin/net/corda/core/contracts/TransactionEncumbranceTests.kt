@@ -40,7 +40,7 @@ class TransactionEncumbranceTests {
                 val validFrom: Instant
         ) : ContractState {
             override val participants: List<AbstractParty> = emptyList()
-            override val contract: Contract = TEST_TIMELOCK_ID
+            override val contract = TEST_TIMELOCK_ID::class.java.name
         }
     }
 

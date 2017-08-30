@@ -44,7 +44,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
-        override val contract = COMMODITY_PROGRAM_ID
+        override val contract = COMMODITY_PROGRAM_ID::class.java.name
         override val exitKeys: Set<PublicKey> = Collections.singleton(owner.owningKey)
         override val participants = listOf(owner)
 

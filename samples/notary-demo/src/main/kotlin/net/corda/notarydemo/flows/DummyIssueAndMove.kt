@@ -22,7 +22,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
     }
 
     data class State(override val participants: List<AbstractParty>, private val discriminator: Int) : ContractState {
-        override val contract = DoNothingContract
+        override val contract = DoNothingContract::class.java.name
     }
 
     @Suspendable
