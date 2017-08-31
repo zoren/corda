@@ -4,18 +4,17 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.io.NotSerializableException
 
-class EnumSerializer(declaredType: Type, declaredClass: Class<*>,factory: SerializerFactory) : AMQPSerializer<Any> {
+class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
     private val typeNotation: TypeNotation
 
     init {
-
         typeNotation = RestrictedType(
                 SerializerFactory.nameForType(declaredType),
                 null, emptyList(), "enum", Descriptor(typeDescriptor, null),
                 declaredClass.enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
-                    Choice (it.first.toString(), it.second.toString())
+                    Choice(it.first.toString(), it.second.toString())
                 })
     }
 
@@ -24,16 +23,15 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>,factory: Serial
     }
 
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
-        val a = input.readObjectOrNull((obj as List<*>)[0], schema, type)
-        val b = input.readObjectOrNull(obj[1], schema, type)
-        val fromOrd = type.asClass()!!.enumConstants.find { (it as Enum<*>).ordinal == b as Int }
+        val enumName = (obj as List<*>)[0] as String
+        val enumOrd = obj[1] as Int
+        val fromOrd = type.asClass()!!.enumConstants[enumOrd]
 
-        if (a != fromOrd?.toString()){
-            throw NotSerializableException("Deerializing obj as enum $type with value $a.$b but "
+        if (enumName != fromOrd?.toString()) {
+            throw NotSerializableException("Deserializing obj as enum $type with value $enumName.$enumOrd but "
                     + "ordinality has changed")
         }
-
-        return fromOrd!!
+        return fromOrd
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
@@ -41,8 +39,8 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>,factory: Serial
 
         data.withDescribed(typeNotation.descriptor) {
             withList {
-                data.putObject(obj.name)
-                data.putObject(obj.ordinal)
+                data.putString(obj.name)
+                data.putInt(obj.ordinal)
             }
         }
     }
