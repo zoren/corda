@@ -55,8 +55,9 @@ interface CashSelection {
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                                                  "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata / ${_metadata.driverName}). " +
+                    "\nAvailable drivers: $cashSelectionAlgos." +
+                    "\nPlease specify an implementation in META-INF/services/net.corda.finance.contracts.asset.CashSelection")
             }.invoke()
         }
     }
@@ -90,6 +91,8 @@ interface CashSelection {
                                         notary: Party? = null,
                                         lockId: UUID,
                                         withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>>
+
+    override fun toString() : String
 }
 
 /**
