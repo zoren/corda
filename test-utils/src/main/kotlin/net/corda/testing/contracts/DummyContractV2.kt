@@ -15,7 +15,7 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2::class.java
  */
 // DOCSTART 1
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
-    override val legacyContract = DummyContract::class.java
+    override val legacyContract = DummyContract::class.java.name
 
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID.name
@@ -52,7 +52,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
             states.forEach {
                 addInputState(it)
                 addOutputState(upgrade(it.state.data))
-                addCommand(UpgradeCommand(DUMMY_V2_PROGRAM_ID), signees.map { it.owningKey }.toList())
+                addCommand(UpgradeCommand(DUMMY_V2_PROGRAM_ID.name), signees.map { it.owningKey }.toList())
             }
         }.toWireTransaction(), signees)
     }

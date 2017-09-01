@@ -195,7 +195,7 @@ class ContractUpgradeFlowTest {
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
-        override val legacyContract = Cash::class.java
+        override val legacyContract = Cash::class.java.name
 
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()

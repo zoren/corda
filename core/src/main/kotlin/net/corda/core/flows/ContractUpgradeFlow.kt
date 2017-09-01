@@ -36,11 +36,11 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
             val participantKeys: Set<PublicKey> = input.participants.map { it.owningKey }.toSet()
             val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
             @Suppress("UNCHECKED_CAST")
-            val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
+            val upgradedContract = javaClass.classLoader.loadClass(command.upgradedContractClass).newInstance() as UpgradedContract<ContractState, *>
             requireThat {
                 "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
-                "Inputs state reference the legacy contract" using (input.contract.javaClass == upgradedContract.legacyContract)
-                "Outputs state reference the upgraded contract" using (output.contract.javaClass == command.upgradedContractClass)
+                "Inputs state reference the legacy contract" using (input.contract == upgradedContract.legacyContract)
+                "Outputs state reference the upgraded contract" using (output.contract == command.upgradedContractClass)
                 "Output state must be an upgraded version of the input state" using (output == upgradedContract.upgrade(input))
             }
         }
@@ -55,7 +55,7 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
                     .withItems(
                             stateRef,
                             contractUpgrade.upgrade(stateRef.state.data),
-                            Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants.map { it.owningKey }),
+                            Command(UpgradeCommand(upgradedContractClass.name), stateRef.state.data.participants.map { it.owningKey }),
                             privacySalt
                     )
         }

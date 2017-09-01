@@ -28,6 +28,6 @@ class DummyContractV2Tests {
         assertEquals(expectedOutput, actualOutput)
 
         val actualCommand = tx.commands.map { it.value }.single()
-        assertTrue((actualCommand as UpgradeCommand).upgradedContractClass == DummyContractV2::class.java)
+        assertTrue((actualCommand as UpgradeCommand).upgradedContractClass == DummyContractV2::class.java.name)
     }
 }

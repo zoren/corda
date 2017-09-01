@@ -240,7 +240,7 @@ interface MoveCommand : CommandData {
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
-data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
+data class UpgradeCommand(val upgradedContractClass: ContractClassName) : CommandData
 
 // DOCSTART 6
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
@@ -288,7 +288,7 @@ annotation class LegalProseReference(val uri: String)
  * @param NewState the upgraded contract state.
  */
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
-    val legacyContract: Class<out Contract>
+    val legacyContract: ContractClassName
     /**
      * Upgrade contract's state object to a new state object.
      *
