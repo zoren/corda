@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
-data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
+data class schemaAndDescriptor(val schema: Schema, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -38,15 +38,15 @@ data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
+class SerializerFactory(val whitelist: ClassWhitelist, cl: ClassLoader) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
     private val classCarpenter = ClassCarpenter(cl)
-    val classloader : ClassLoader
+    val classloader: ClassLoader
         get() = classCarpenter.classloader
 
-    fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
+    fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: ObjectSerializer): AMQPSerializer<Any> {
         return serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             EvolutionSerializer.make(typeNotation as CompositeType, newSerializer, this)
         }
@@ -66,7 +66,8 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
-            (Collection::class.java.isAssignableFrom(declaredClass)) -> { serializersByType.computeIfAbsent(declaredType) {
+            (Collection::class.java.isAssignableFrom(declaredClass)) -> {
+                serializersByType.computeIfAbsent(declaredType) {
                     CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(
                             declaredClass, arrayOf(AnyType), null), this)
                 }
@@ -91,17 +92,17 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      * type.
      */
     // TODO: test GenericArrayType
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? {
-        if (declaredType is ParameterizedType) {
-            return inferTypeVariables(actualClass, declaredClass, declaredType)
-        } else if (declaredType is Class<*>) {
-            // Nothing to infer, otherwise we'd have ParameterizedType
-            return actualClass
-        } else if (declaredType is GenericArrayType) {
-            val declaredComponent = declaredType.genericComponentType
-            return inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
-        } else return null
-    }
+    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? =
+            when (declaredType) {
+                is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
+                // Nothing to infer, otherwise we'd have ParameterizedType
+                is Class<*> -> actualClass
+                is GenericArrayType -> {
+                    val declaredComponent = declaredType.genericComponentType
+                    inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
+                }
+                else -> null
+            }
 
     /**
      * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
@@ -118,8 +119,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
                 if (implementationChain != null) {
                     val start = implementationChain.last()
                     val rest = implementationChain.dropLast(1).drop(1)
-                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) {
-                        resolved, chainEntry ->
+                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) { resolved, chainEntry ->
                         val newResolved = resolved.resolveType(chainEntry)
                         TypeResolver().where(chainEntry, newResolved)
                     }
@@ -211,13 +211,22 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
-            is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
-        }
+        is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+        is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
+    }
 
     private fun processRestrictedType(typeNotation: RestrictedType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
+
+        // this might not be true in the future but as the code stands *now* enum types are the
+        // only restricted types that have choices
+        if (typeNotation.choices.isNotEmpty() && !type.asClass()!!.isEnum) {
+            throw NotSerializableException("Choices should only be provided for enum types")
+        } else if (type.asClass()!!.isEnum && typeNotation.choices.isEmpty()) {
+            throw NotSerializableException("Enum types must have choices (enum values)")
+        }
+
         return get(null, type)
     }
 
@@ -234,7 +243,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (type.isArray()) {
                     // Allow Object[] since this can be quite common (i.e. an untyped array)
-                    if(type.componentType() != Object::class.java) whitelisted(type.componentType())
+                    if (type.componentType() != Object::class.java) whitelisted(type.componentType())
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else if (clazz.kotlin.objectInstance != null) {
