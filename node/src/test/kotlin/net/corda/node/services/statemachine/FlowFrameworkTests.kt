@@ -88,8 +88,10 @@ class FlowFrameworkTests {
         // We don't create a network map, so manually handle registrations
         val nodes = listOf(node1, node2, notary1, notary2)
         nodes.forEach { node ->
-            nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
-                node.services.identityService.verifyAndRegisterIdentity(identity)
+            node.database.transaction {
+                nodes.map { it.services.myInfo.legalIdentityAndCert }.forEach { identity ->
+                    node.services.identityService.verifyAndRegisterIdentity(identity)
+                }
             }
         }
     }
@@ -166,6 +168,7 @@ class FlowFrameworkTests {
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         node3.disableDBCloseOnStop()
+        node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         node3.stop()
 
         node3 = mockNet.createNode(node1.network.myAddress, node3.id)
@@ -175,6 +178,7 @@ class FlowFrameworkTests {
         node3.smm.executor.flush()
         assertEquals(true, restoredFlow.flowStarted) // Now we should have run the flow and hopefully cleared the init checkpoint
         node3.disableDBCloseOnStop()
+        node3.services.networkMapCache.clearNetworkMapCache() // zap persisted NetworkMapCache to force use of network.
         node3.stop()
 
         // Now it is completed the flow should leave no Checkpoint.

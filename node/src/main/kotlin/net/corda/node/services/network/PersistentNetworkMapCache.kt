@@ -248,7 +248,8 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
     private fun updateInfoDB(nodeInfo: NodeInfo) {
         // TODO Temporary workaround to force isolated transaction (otherwise it causes race conditions when processing
         //  network map registration on network map node)
-        val session = serviceHub.database.entityManagerFactory.withOptions().connection(serviceHub.database.dataSource.connection
+        val connection = serviceHub.database.dataSource.connection
+        val session = serviceHub.database.entityManagerFactory.withOptions().connection(connection
                 .apply {
                     transactionIsolation = 1
                 }).openSession()
@@ -263,6 +264,7 @@ open class PersistentNetworkMapCache(private val serviceHub: ServiceHubInternal)
         session.merge(nodeInfoEntry)
         tx.commit()
         session.close()
+        connection.close()
     }
 
     private fun removeInfoDB(nodeInfo: NodeInfo) {
