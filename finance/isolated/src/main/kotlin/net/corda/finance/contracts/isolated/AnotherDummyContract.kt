@@ -10,6 +10,8 @@ import net.corda.nodeapi.DummyContractBackdoor
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract::class.java.name
 
 class AnotherDummyContract : Contract, DummyContractBackdoor {
+    val magicString = "helloworld"
+
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
         override val participants: List<AbstractParty>
